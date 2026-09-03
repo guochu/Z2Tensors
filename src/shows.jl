@@ -2,7 +2,7 @@
 
 type_repr(T::Type) = repr(T)
 
-function Base.show(io::IO, c::ZNIrrep)
+function Base.show(io::IO, c::Z2Irrep)
     I = typeof(c)
     print_type = get(io, :typeinfo, nothing) !== I
     print_type && print(io, type_repr(I), '(')
@@ -11,14 +11,14 @@ function Base.show(io::IO, c::ZNIrrep)
     return nothing
 end
 
-type_repr(::Type{<:GradedSpace{Z2Irrep}}) = "Z2Space"
+type_repr(::Type{Z2Space}) = "Z2Space"
 
 
-function Base.show(io::IO, V::GradedSpace{I}) where {I<:Sector}
+function Base.show(io::IO, V::Z2Space)
     print(io, type_repr(typeof(V)), "(")
     seperator = ""
     comma = ", "
-    io2 = IOContext(io, :typeinfo => I)
+    io2 = IOContext(io, :typeinfo => Z2Irrep)
     for c in sectors(V)
         if isdual(V)
             print(io2, seperator, dual(c), "=>", dim(V, c))
@@ -31,10 +31,10 @@ function Base.show(io::IO, V::GradedSpace{I}) where {I<:Sector}
     V.dual && print(io, "'")
     return nothing
 end
-function Base.show(io::IO, P::ProductSpace{S}) where {S<:ElementarySpace}
+function Base.show(io::IO, P::ProductSpace)
     spaces = P.spaces
     if length(spaces) == 0
-        print(io, "ProductSpace{", S, ", 0}")
+        print(io, "ProductSpace{", Z2Space, ", 0}")
     end
     if length(spaces) == 1
         print(io, "ProductSpace")
@@ -64,9 +64,9 @@ end
 
 
 
-function Base.show(io::IO, t::FusionTree{I}) where {I<:Sector}
-    return print(IOContext(io, :typeinfo => I), "FusionTree{", type_repr(I), "}(",
-                    t.uncoupled, ", ", t.coupled, ")")
+function Base.show(io::IO, t::FusionTree)
+    return print(IOContext(io, :typeinfo => Z2Irrep), "FusionTree{",
+                    type_repr(Z2Irrep), "}(", t.uncoupled, ", ", t.coupled, ")")
 end
 
 

@@ -2,15 +2,14 @@
 
 abstract type Sector end
 
-struct ZNIrrep{N} <: Sector#<: AbstractIrrep{ℤ{N}}
+struct Z2Irrep <: Sector
     n::UInt8
-    function ZNIrrep{N}(n::Integer) where {N}
-        # N ≤ SMALL_ZN_CUTOFF || throw(DomainError(N, "N exceeds the maximal value, use `LargeZNIrrep` instead"))
-        return new{N}(UInt8(mod(n, N)))
+    function Z2Irrep(n::Integer)
+        return new(UInt8(mod(n, 2)))
     end
 end
 
-const Z2Irrep = ZNIrrep{2}
+Z2Irrep() = Z2Irrep(0)
 
 
 
@@ -30,10 +29,6 @@ end
 
 
 
-# modulus(c::Z2Irrep) = 2
-# modulus(::Type{Z2Irrep}) = 2
-
-
 charge(c::Z2Irrep) = Int(c.n)
 
 Base.convert(::Type{Z2Irrep}, n::Real) = Z2Irrep(n)
@@ -41,17 +36,13 @@ Base.convert(::Type{Z2Irrep}, n::Real) = Z2Irrep(n)
 unit(::Type{Z2Irrep}) = Z2Irrep(zero(UInt8))
 dual(c::Z2Irrep) = c # typeof(c)(N - c.n)
 
-# ⊗() = (one(Z2Irrep),)
-# ⊗(c::Z2Irrep) = (c,)
-# ⊗(c::Z2Irrep, cs::Vararg{Z2Irrep}) = (Z2Irrep(sum(c.n for c in cs) + c.n),)
-⊗() = one(Z2Irrep)
 ⊗(c::Z2Irrep) = c
 ⊗(c::Z2Irrep, cs::Vararg{Z2Irrep}) = Z2Irrep(sum(c.n for c in cs) + c.n)
 const otimes = ⊗
 
 
-Base.hash(c::ZNIrrep, h::UInt) = hash(c.n, h)
-Base.isless(c1::I, c2::I) where {I <: ZNIrrep} = isless(c1.n, c2.n)
+Base.hash(c::Z2Irrep, h::UInt) = hash(c.n, h)
+Base.isless(c1::Z2Irrep, c2::Z2Irrep) = isless(c1.n, c2.n)
 
 unit(a::Z2Irrep) = unit(typeof(a))
 Base.one(a::Z2Irrep) = unit(a)
@@ -65,4 +56,3 @@ Base.isone(a::Z2Irrep) = isunit(a)
 Base.conj(a::Z2Irrep) = dual(a)
 
 dim(a::Z2Irrep) = 1
-

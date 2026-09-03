@@ -39,13 +39,13 @@ end
 # Compute truncation dimensions
 function _compute_truncdim(Σdata, ::NoTruncation, p=2)
     I = keytype(Σdata)
-    truncdim = SectorDict{I,Int}(c => length(v) for (c, v) in Σdata)
+    truncdim = SectorDict{Int}(c => length(v) for (c, v) in Σdata)
     return truncdim
 end
 function _compute_truncdim(Σdata, trunc::TruncationError, p=2)
     I = keytype(Σdata)
     S = real(eltype(valtype(Σdata)))
-    truncdim = SectorDict{I,Int}(c => length(Σc) for (c, Σc) in Σdata)
+    truncdim = SectorDict{Int}(c => length(Σc) for (c, Σc) in Σdata)
     truncerr = zero(S)
     while true
         cmin = _findnexttruncvalue(Σdata, truncdim, p)
@@ -61,7 +61,7 @@ function _compute_truncdim(Σdata, trunc::TruncationError, p=2)
 end
 function _compute_truncdim(Σdata, trunc::TruncationDimension, p=2)
     I = keytype(Σdata)
-    truncdim = SectorDict{I,Int}(c => length(v) for (c, v) in Σdata)
+    truncdim = SectorDict{Int}(c => length(v) for (c, v) in Σdata)
     while sum(dim(c) * d for (c, d) in truncdim) > trunc.dim
         cmin = _findnexttruncvalue(Σdata, truncdim, p)
         isnothing(cmin) && break
@@ -71,14 +71,14 @@ function _compute_truncdim(Σdata, trunc::TruncationDimension, p=2)
 end
 function _compute_truncdim(Σdata, trunc::TruncationSpace, p=2)
     I = keytype(Σdata)
-    truncdim = SectorDict{I,Int}(c => min(length(v), dim(trunc.space, c))
+    truncdim = SectorDict{Int}(c => min(length(v), dim(trunc.space, c))
                                  for (c, v) in Σdata)
     return truncdim
 end
 
 function _compute_truncdim(Σdata, trunc::TruncationCutoff, p=2)
     I = keytype(Σdata)
-    truncdim = SectorDict{I,Int}(c => length(v) for (c, v) in Σdata)
+    truncdim = SectorDict{Int}(c => length(v) for (c, v) in Σdata)
     for (c, v) in Σdata
         newdim = findlast(Base.Fix2(>, trunc.ϵ), v)
         if newdim === nothing
@@ -122,7 +122,7 @@ end
 # end
 
 # auxiliary function
-function _findnexttruncvalue(Σdata, truncdim::SectorDict{I,Int}, p::Real) where {I<:Sector}
+function _findnexttruncvalue(Σdata, truncdim::SectorDict{Int}, p::Real)
     # early return
     (isempty(Σdata) || all(iszero, values(truncdim))) && return nothing
 
@@ -141,8 +141,8 @@ function _findnexttruncvalue(Σdata, truncdim::SectorDict{I,Int}, p::Real) where
     end
     return cmin
 end
-function _findnextgrowvalue(Σdata, truncdim::SectorDict{I,Int}, p::Real) where {I<:Sector}
-    istruncated = SectorDict{I,Bool}(c => (d < length(Σdata[c])) for (c, d) in truncdim)
+function _findnextgrowvalue(Σdata, truncdim::SectorDict{Int}, p::Real)
+    istruncated = SectorDict{Bool}(c => (d < length(Σdata[c])) for (c, d) in truncdim)
     # early return
     (isempty(Σdata) || !any(values(istruncated))) && return nothing
 

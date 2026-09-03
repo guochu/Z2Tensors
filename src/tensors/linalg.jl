@@ -60,10 +60,10 @@ end
 
 
 id(V::TensorSpace) = id(Float64, V)
-function id(A::Type, V::TensorSpace{S}) where {S}
+function id(A::Type, V::TensorSpace)
     W = V ← V
     N = length(codomain(W))
-    dst = tensormaptype(S, N, N, A)(undef, W)
+    dst = tensormaptype(N, N, A)(undef, W)
     return id!(dst)
 end
 const id! = one!
@@ -102,8 +102,8 @@ for morphism in (:isomorphism, :unitary, :isometry)
         function $morphism(A::Type, codomain::TensorSpace, domain::TensorSpace)
             return $morphism(A, codomain ← domain)
         end
-        function $morphism(A::Type, V::TensorMapSpace{S,N₁,N₂}) where {S,N₁,N₂}
-            t = tensormaptype(S, N₁, N₂, A)(undef, V)
+        function $morphism(A::Type, V::TensorMapSpace{N₁,N₂}) where {N₁,N₂}
+            t = tensormaptype(N₁, N₂, A)(undef, V)
             return $morphism!(t)
         end
         $morphism(t::AbstractTensorMap) = $morphism!(similar(t))
@@ -281,7 +281,7 @@ end
 
 
 # concatenate tensors
-function catdomain(t1::TT, t2::TT) where {S,N₁,TT<:AbstractTensorMap{<:Any,S,N₁,1}}
+function catdomain(t1::TT, t2::TT) where {N₁,TT<:AbstractTensorMap{<:Any,N₁,1}}
     codomain(t1) == codomain(t2) ||
         throw(SpaceMismatch("codomains of tensors to concatenate must match:\n" *
                             "$(codomain(t1)) ≠ $(codomain(t2))"))
@@ -299,7 +299,7 @@ function catdomain(t1::TT, t2::TT) where {S,N₁,TT<:AbstractTensorMap{<:Any,S,N
     end
     return t
 end
-function catcodomain(t1::TT, t2::TT) where {S,N₂,TT<:AbstractTensorMap{<:Any,S,1,N₂}}
+function catcodomain(t1::TT, t2::TT) where {N₂,TT<:AbstractTensorMap{<:Any,1,N₂}}
     domain(t1) == domain(t2) ||
         throw(SpaceMismatch("domains of tensors to concatenate must match:\n" *
                             "$(domain(t1)) ≠ $(domain(t2))"))

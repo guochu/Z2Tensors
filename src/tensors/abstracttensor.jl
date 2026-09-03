@@ -3,12 +3,12 @@
 # Abstract Tensor type
 #----------------------
 
-abstract type AbstractTensorMap{T<:Number,S<:IndexSpace,N₁,N₂} end
+abstract type AbstractTensorMap{T<:Number,N₁,N₂} end
 
-const AbstractTensor{T,S,N} = AbstractTensorMap{T,S,N,0}
+const AbstractTensor{T,N} = AbstractTensorMap{T,N,0}
 
 Base.eltype(::Type{<:AbstractTensorMap{T}}) where {T} = T
-spacetype(::Type{<:AbstractTensorMap{<:Any,S}}) where {S} = S
+spacetype(::Type{<:AbstractTensorMap}) = Z2Space
 sectortype(::Type{TT}) where {TT<:AbstractTensorMap} = sectortype(spacetype(TT))
 
 # function InnerProductStyle(::Type{TT}) where {TT<:AbstractTensorMap}
@@ -36,8 +36,8 @@ domain(t::AbstractTensorMap) = domain(space(t))
 domain(t::AbstractTensorMap, i) = domain(t)[i]
 source(t::AbstractTensorMap) = domain(t) # categorical terminology
 
-numout(::Type{<:AbstractTensorMap{T,S,N₁}}) where {T,S,N₁} = N₁
-numin(::Type{<:AbstractTensorMap{T,S,N₁,N₂}}) where {T,S,N₁,N₂} = N₂
+numout(::Type{<:AbstractTensorMap{T,N₁}}) where {T,N₁} = N₁
+numin(::Type{<:AbstractTensorMap{T,N₁,N₂}}) where {T,N₁,N₂} = N₂
 numind(::Type{TT}) where {TT<:AbstractTensorMap} = numin(TT) + numout(TT)
 const order = numind
 
@@ -131,13 +131,13 @@ By default, this will result in `TensorMap{T}(undef, V)` when custom objects do 
 specialize this method.
 """ Base.similar(::AbstractTensorMap, args...)
 
-function Base.similar(t::AbstractTensorMap, ::Type{T}, codomain::TensorSpace{S},
-                      domain::TensorSpace{S}) where {T,S}
+function Base.similar(t::AbstractTensorMap, ::Type{T}, codomain::TensorSpace,
+                      domain::TensorSpace) where {T}
     return similar(t, T, codomain ← domain)
 end
 # 3 arguments
-function Base.similar(t::AbstractTensorMap, codomain::TensorSpace{S},
-                      domain::TensorSpace{S}) where {S}
+function Base.similar(t::AbstractTensorMap, codomain::TensorSpace,
+                      domain::TensorSpace)
     return similar(t, similarstoragetype(t), codomain ← domain)
 end
 function Base.similar(t::AbstractTensorMap, ::Type{T}, codomain::TensorSpace) where {T}
@@ -154,7 +154,7 @@ Base.similar(t::AbstractTensorMap) = similar(t, similarstoragetype(t), space(t))
 
 # generic implementation for AbstractTensorMap -> returns `TensorMap`
 function Base.similar(t::AbstractTensorMap, ::Type{TorA},
-                      P::TensorMapSpace{S}) where {TorA,S}
+                      P::TensorMapSpace) where {TorA}
     if TorA <: Number
         T = TorA
         A = similarstoragetype(t, T)
@@ -167,15 +167,15 @@ function Base.similar(t::AbstractTensorMap, ::Type{TorA},
 
     N₁ = length(codomain(P))
     N₂ = length(domain(P))
-    return TensorMap{T,S,N₁,N₂,A}(undef, P)
+    return TensorMap{T,N₁,N₂,A}(undef, P)
 end
 
 # implementation in type-domain
 function Base.similar(::Type{TT}, P::TensorMapSpace) where {TT<:AbstractTensorMap}
     return TensorMap{scalartype(TT)}(undef, P)
 end
-function Base.similar(::Type{TT}, cod::TensorSpace{S},
-                      dom::TensorSpace{S}) where {TT<:AbstractTensorMap,S}
+function Base.similar(::Type{TT}, cod::TensorSpace,
+                      dom::TensorSpace) where {TT<:AbstractTensorMap}
     return TensorMap{scalartype(TT)}(undef, cod, dom)
 end
 

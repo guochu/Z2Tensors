@@ -3,44 +3,62 @@
 #==========================================================#
 
 
-struct TensorMap{T,S<:IndexSpace,N₁,N₂,A<:DenseVector{T}} <: AbstractTensorMap{T,S,N₁,N₂}
+struct TensorMap{T<:Number,N₁,N₂,A<:DenseVector{T},
+                 FBS<:FusionBlockStructure{N₁,N₂}} <: AbstractTensorMap{T,N₁,N₂}
     data::A
-    space::TensorMapSpace{S,N₁,N₂}
+    space::TensorMapSpace{N₁,N₂}
+    structure::FBS
 
-    # uninitialized constructors
-    function TensorMap{T,S,N₁,N₂,A}(::UndefInitializer,
-                                    space::TensorMapSpace{S,N₁,N₂}) where {T,S<:IndexSpace,
-                                                                           N₁,N₂,
-                                                                           A<:DenseVector{T}}
-        d = fusionblockstructure(space).totaldim
-        data = A(undef, d)
-        if !isbitstype(T)
-            zerovector!(data)
-        end
-        return TensorMap{T,S,N₁,N₂,A}(data, space)
+    # constructors from data and space (structure is computed from the space)
+    function TensorMap{T,N₁,N₂,A}(data::A,
+                                    space::TensorMapSpace{N₁,N₂}) where {T,N₁,N₂,
+                                                                         A<:DenseVector{T}}
+        structure = fusionblockstructure(space)
+        return new{T,N₁,N₂,A,typeof(structure)}(data, space, structure)
     end
 
-    # constructors from data
-    function TensorMap{T,S,N₁,N₂,A}(data::A,
-                                    space::TensorMapSpace{S,N₁,N₂}) where {T,S<:IndexSpace,
-                                                                           N₁,N₂,
-                                                                           A<:DenseVector{T}}
-        # T ⊆ field(S) || @warn("scalartype(data) = $T ⊈ $(field(S)))", maxlog = 1)
-        I = sectortype(S)
-        # T <: Real && !(sectorscalartype(I) <: Real) &&
-        #     @warn("Tensors with real data might be incompatible with sector type $I",
-        #           maxlog = 1)
-        return new{T,S,N₁,N₂,A}(data, space)
+    # constructor from data, space and a precomputed structure
+    function TensorMap{T,N₁,N₂,A,FBS}(data::A,
+                                      space::TensorMapSpace{N₁,N₂},
+                                      structure::FBS) where {T,N₁,N₂,
+                                                             A<:DenseVector{T},
+                                                             FBS<:FusionBlockStructure{N₁,N₂}}
+        return new{T,N₁,N₂,A,FBS}(data, space, structure)
     end
 end
 
-const Tensor{T,S,N,A} = TensorMap{T,S,N,0,A}
+# uninitialized constructor (outer, computes the structure from the space)
+function TensorMap{T,N₁,N₂,A}(::UndefInitializer,
+                                space::TensorMapSpace{N₁,N₂}) where {T,N₁,N₂,
+                                                                     A<:DenseVector{T}}
+    structure = fusionblockstructure(space)
+    data = A(undef, structure.totaldim)
+    if !isbitstype(T)
+        zerovector!(data)
+    end
+    return TensorMap{T,N₁,N₂,A,typeof(structure)}(data, space, structure)
+end
 
-function tensormaptype(S::Type{<:IndexSpace}, N₁, N₂, TorA::Type)
+function TensorMap{T,N₁,N₂,A,FBS}(::UndefInitializer,
+                                    space::TensorMapSpace{N₁,N₂}) where {T,N₁,N₂,
+                                                                         A<:DenseVector{T},
+                                                                         FBS<:FusionBlockStructure{N₁,N₂}}
+    structure = fusionblockstructure(space)
+    data = A(undef, structure.totaldim)
+    if !isbitstype(T)
+        zerovector!(data)
+    end
+    return TensorMap{T,N₁,N₂,A,FBS}(data, space, structure)
+end
+
+const Tensor{T,N,A} = TensorMap{T,N,0,A}
+
+function tensormaptype(N₁, N₂, TorA::Type)
+    FBS = fusionblockstructuretype(N₁, N₂)
     if TorA <: Number
-        return TensorMap{TorA,S,N₁,N₂,Vector{TorA}}
+        return TensorMap{TorA,N₁,N₂,Vector{TorA},FBS}
     elseif TorA <: DenseVector
-        return TensorMap{scalartype(TorA),S,N₁,N₂,TorA}
+        return TensorMap{scalartype(TorA),N₁,N₂,TorA,FBS}
     else
         throw(ArgumentError("argument $TorA should specify a scalar type (`<:Number`) or a storage type `<:DenseVector{<:Number}`"))
     end
@@ -50,39 +68,43 @@ end
 #--------------------------------------------
 space(t::TensorMap) = t.space
 
-storagetype(::Type{<:TensorMap{T,S,N₁,N₂,A}}) where {T,S,N₁,N₂,A<:DenseVector{T}} = A
+storagetype(::Type{<:TensorMap{T,N₁,N₂,A}}) where {T,N₁,N₂,A<:DenseVector{T}} = A
 
 dim(t::TensorMap) = length(t.data)
 
 # General TensorMap constructors
 #--------------------------------
 # undef constructors
-function TensorMap{T}(::UndefInitializer, V::TensorMapSpace{S,N₁,N₂}) where {T,S,N₁,N₂}
-    return TensorMap{T,S,N₁,N₂,Vector{T}}(undef, V)
+function TensorMap{T}(::UndefInitializer, V::TensorMapSpace{N₁,N₂}) where {T,N₁,N₂}
+    return TensorMap{T,N₁,N₂,Vector{T}}(undef, V)
 end
-function TensorMap{T}(::UndefInitializer, codomain::TensorSpace{S},
-                      domain::TensorSpace{S}) where {T,S}
+function TensorMap{T}(::UndefInitializer, codomain::TensorSpace,
+                      domain::TensorSpace) where {T}
     return TensorMap{T}(undef, codomain ← domain)
 end
-function Tensor{T}(::UndefInitializer, V::TensorSpace{S}) where {T,S}
+function Tensor{T}(::UndefInitializer, V::TensorSpace) where {T}
     return TensorMap{T}(undef, V ← one(V))
 end
 
 # constructor starting from vector = independent data (N₁ + N₂ = 1 is special cased below)
 # documentation is captured by the case where `data` is a general array
 # here, we force the `T` argument to distinguish it from the more general constructor below
-function TensorMap{T}(data::A,
-                      V::TensorMapSpace{S,N₁,N₂}) where {T,S,N₁,N₂,A<:DenseVector{T}}
-    return TensorMap{T,S,N₁,N₂,A}(data, V)
+function TensorMap(data::DenseVector{T}, space::TensorMapSpace{N₁,N₂},
+                   structure::FusionBlockStructure{N₁,N₂}) where {T,N₁,N₂}
+    return TensorMap{T,N₁,N₂,typeof(data),typeof(structure)}(data, space, structure)
 end
-function TensorMap{T}(data::DenseVector{T}, codomain::TensorSpace{S},
-                      domain::TensorSpace{S}) where {T,S}
+function TensorMap{T}(data::A,
+                      V::TensorMapSpace{N₁,N₂}) where {T,N₁,N₂,A<:DenseVector{T}}
+    return TensorMap{T,N₁,N₂,A}(data, V)
+end
+function TensorMap{T}(data::DenseVector{T}, codomain::TensorSpace,
+                      domain::TensorSpace) where {T}
     return TensorMap(data, codomain ← domain)
 end
 
 # constructor starting from block data
 function TensorMap(data::AbstractDict{<:Sector,<:AbstractMatrix},
-                   V::TensorMapSpace{S,N₁,N₂}) where {S,N₁,N₂}
+                   V::TensorMapSpace{N₁,N₂}) where {N₁,N₂}
     T = eltype(valtype(data))
     t = TensorMap{T}(undef, V)
     for (c, b) in blocks(t)
@@ -98,20 +120,20 @@ function TensorMap(data::AbstractDict{<:Sector,<:AbstractMatrix},
     end
     return t
 end
-function TensorMap(data::AbstractDict{<:Sector,<:AbstractMatrix}, codom::TensorSpace{S},
-                   dom::TensorSpace{S}) where {S}
+function TensorMap(data::AbstractDict{<:Sector,<:AbstractMatrix}, codom::TensorSpace,
+                   dom::TensorSpace)
     return TensorMap(data, codom ← dom)
 end
 
 
 for (fname, felt) in ((:zeros, :zero), (:ones, :one))
     @eval begin
-        function Base.$fname(codomain::TensorSpace{S},
-                             domain::TensorSpace{S}=one(codomain)) where {S<:IndexSpace}
+        function Base.$fname(codomain::TensorSpace,
+                             domain::TensorSpace=one(codomain))
             return Base.$fname(codomain ← domain)
         end
-        function Base.$fname(::Type{T}, codomain::TensorSpace{S},
-                             domain::TensorSpace{S}=one(codomain)) where {T,S<:IndexSpace}
+        function Base.$fname(::Type{T}, codomain::TensorSpace,
+                             domain::TensorSpace=one(codomain)) where {T}
             return Base.$fname(T, codomain ← domain)
         end
         Base.$fname(V::TensorMapSpace) = Base.$fname(Float64, V)
@@ -129,17 +151,17 @@ for randf in (:rand, :randn, :randexp)
 
     @eval begin
         # converting `codomain` and `domain` into `HomSpace`
-        function $randfun(codomain::TensorSpace{S},
-                          domain::TensorSpace{S}) where {S<:IndexSpace}
+        function $randfun(codomain::TensorSpace,
+                          domain::TensorSpace)
             return $randfun(codomain ← domain)
         end
-        function $randfun(::Type{T}, codomain::TensorSpace{S},
-                          domain::TensorSpace{S}) where {T,S<:IndexSpace}
+        function $randfun(::Type{T}, codomain::TensorSpace,
+                          domain::TensorSpace) where {T}
             return $randfun(T, codomain ← domain)
         end
         function $randfun(rng::Random.AbstractRNG, ::Type{T},
-                          codomain::TensorSpace{S},
-                          domain::TensorSpace{S}) where {T,S<:IndexSpace}
+                          codomain::TensorSpace,
+                          domain::TensorSpace) where {T}
             return $randfun(rng, T, codomain ← domain)
         end
 
@@ -182,7 +204,7 @@ for randf in (:rand, :randn, :randexp)
     end
 end
 
-function TensorMap(data::AbstractVector, V::TensorMapSpace{S,N₁,N₂}) where {S<:IndexSpace,N₁,N₂}
+function TensorMap(data::AbstractVector, V::TensorMapSpace{N₁,N₂}) where {N₁,N₂}
     T = eltype(data)
     @assert length(data) == dim(V)
     if data isa DenseVector # refer to specific data-capturing constructor
@@ -191,7 +213,7 @@ function TensorMap(data::AbstractVector, V::TensorMapSpace{S,N₁,N₂}) where {
         return TensorMap{T}(collect(data), V)
     end
 end
-function TensorMap(data::AbstractArray, codom::TensorSpace{S}, dom::TensorSpace{S}) where {S}
+function TensorMap(data::AbstractArray, codom::TensorSpace, dom::TensorSpace)
     return TensorMap(data, codom ← dom)
 end
 function Tensor(data::AbstractArray, codom::TensorSpace)
@@ -203,7 +225,7 @@ end
 
 # Efficient copy constructors
 #-----------------------------
-Base.copy(t::TensorMap) = typeof(t)(copy(t.data), t.space)
+Base.copy(t::TensorMap) = TensorMap(copy(t.data), t.space, t.structure)
 
 # Conversion between TensorMap and Dict, for read and write purpose
 #------------------------------------------------------------------
@@ -236,7 +258,9 @@ end
 #-------------------------------------------------
 block(t::TensorMap, c::Sector) = blocks(t)[c]
 
-blocks(t::TensorMap) = BlockIterator(t, fusionblockstructure(t).blockstructure)
+fusionblockstructure(t::TensorMap) = t.structure
+
+blocks(t::TensorMap) = BlockIterator(t, t.structure.blockstructure)
 
 function blocktype(::Type{TT}) where {TT<:TensorMap}
     A = storagetype(TT)
@@ -267,9 +291,9 @@ end
 
 # Indexing and getting and setting the data at the subblock level
 #-----------------------------------------------------------------
-@inline function Base.getindex(t::TensorMap{T,S,N₁,N₂},
-                               f₁::FusionTree{I,N₁},
-                               f₂::FusionTree{I,N₂}) where {T,S,N₁,N₂,I<:Sector}
+@inline function Base.getindex(t::TensorMap{T,N₁,N₂},
+                               f₁::FusionTree{N₁},
+                               f₂::FusionTree{N₂}) where {T,N₁,N₂}
     structure = fusionblockstructure(t)
     @boundscheck begin
         haskey(structure.fusiontreeindices, (f₁, f₂)) || throw(SectorMismatch())
@@ -282,11 +306,10 @@ end
 end
 
 
-@propagate_inbounds function Base.setindex!(t::TensorMap{T,S,N₁,N₂},
+@propagate_inbounds function Base.setindex!(t::TensorMap{T,N₁,N₂},
                                             v,
-                                            f₁::FusionTree{I,N₁},
-                                            f₂::FusionTree{I,N₂}) where {T,S,N₁,N₂,
-                                                                         I<:Sector}
+                                            f₁::FusionTree{N₁},
+                                            f₂::FusionTree{N₂}) where {T,N₁,N₂}
     return copy!(getindex(t, f₁, f₂), v)
 end
 
@@ -298,9 +321,9 @@ end
         throw(ArgumentError("Number of sectors does not match."))
     s₁ = TupleTools.getindices(sectors, codomainind(t))
     s₂ = map(dual, TupleTools.getindices(sectors, domainind(t)))
-    c1 = length(s₁) == 0 ? one(I) : (length(s₁) == 1 ? s₁[1] : ⊗(s₁...)) # first(⊗(s₁...))
+    c1 = couple(s₁)
     @boundscheck begin
-        c2 = length(s₂) == 0 ? one(I) : (length(s₂) == 1 ? s₂[1] : ⊗(s₂...)) # first(⊗(s₂...))
+        c2 = couple(s₂)
         c2 == c1 || throw(SectorMismatch("Not a valid sector for this tensor"))
         hassector(codomain(t), s₁) && hassector(domain(t), s₂)
     end
@@ -331,30 +354,27 @@ function Base.convert(::Type{TensorMap}, t::AbstractTensorMap)
     return copy!(TensorMap{scalartype(t)}(undef, space(t)), t)
 end
 
-function Base.convert(TT::Type{TensorMap{T,S,N₁,N₂,A}},
-                      t::AbstractTensorMap{<:Any,S,N₁,N₂}) where {T,S,N₁,N₂,A}
-    if typeof(t) === TT
-        return t
-    else
-        tnew = TT(undef, space(t))
-        return copy!(tnew, t)
-    end
+function Base.convert(TT::Type{<:TensorMap}, t::AbstractTensorMap)
+    typeof(t) === TT && return t
+    tnew = TT(undef, space(t))
+    return copy!(tnew, t)
 end
 
 function Base.promote_rule(::Type{<:TT₁},
-                           ::Type{<:TT₂}) where {S,N₁,N₂,
-                                                 TT₁<:TensorMap{<:Any,S,N₁,N₂},
-                                                 TT₂<:TensorMap{<:Any,S,N₁,N₂}}
+                           ::Type{<:TT₂}) where {N₁,N₂,
+                                                 TT₁<:TensorMap{<:Any,N₁,N₂},
+                                                 TT₂<:TensorMap{<:Any,N₁,N₂}}
     A = VectorInterface.promote_add(storagetype(TT₁), storagetype(TT₂))
     T = scalartype(A)
-    return TensorMap{T,S,N₁,N₂,A}
+    return TensorMap{T,N₁,N₂,A,fusionblockstructuretype(N₁, N₂)}
 end
 
 
 
-function Base.empty(::Type{TensorMap{T,S,N₁,N₂,A}}) where {T,S<:IndexSpace,N₁,N₂,A<:DenseVector{T}}
-    space = ⊗((zero(S) for i in 1:N₁)...) ← ⊗((zero(S) for i in 1:N₂)...)
-    TensorMap{T,S,N₁,N₂,A}(undef, space)
+function Base.empty(::Type{<:TensorMap{T,N₁,N₂,A}}) where {T,N₁,N₂,
+                                                                A<:DenseVector{T}}
+    space = fuse(ntuple(_ -> zero(Z2Space), N₁)) ← fuse(ntuple(_ -> zero(Z2Space), N₂))
+    TensorMap{T,N₁,N₂,A}(undef, space)
 end
 Base.empty(t::TensorMap) = empty(typeof(t))
 

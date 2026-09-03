@@ -4,12 +4,11 @@ module Z2Tensors
 # Exports
 #---------
 # Types:
-export Sector, AbstractIrrep, Irrep
-export Z2Irrep, ZNIrrep
-export ProductSector
+export Sector
+export Z2Irrep
 
 export VectorSpace, Field, ElementarySpace
-export GradedSpace, Z2Space
+export Z2Space
 export CompositeSpace, ProductSpace
 export FusionTree
 export IndexSpace, HomSpace, TensorSpace, TensorMapSpace
@@ -75,8 +74,6 @@ using TensorOperations: TensorOperations, @tensor, @tensoropt, @ncon, ncon
 using TensorOperations: IndexTuple, Index2Tuple, linearize, AbstractBackend
 const TO = TensorOperations
 
-using LRUCache
-
 
 using Base: @boundscheck, @propagate_inbounds, @constprop,
             OneTo, tail, front,
@@ -109,7 +106,20 @@ include("auxiliary/linalg.jl")
 
 #--------------------------------------------------------------------
 # experiment with different dictionaries
-const SectorDict{K,V} = SortedVectorDict{K,V}
+const SectorDict{V} = SortedVectorDict{Z2Irrep,V}
+SectorDict(kv) = _SectorDict(collect(kv))
+function _SectorDict(pairs::Vector{Pair{Z2Irrep,V}}) where {V}
+    return SectorDict{V}(pairs)
+end
+function _SectorDict(pairs)
+    all(p -> p isa Pair, pairs) ||
+        throw(ArgumentError("SectorDict(kv): kv needs to be an iterator of pairs"))
+    d = SectorDict{Any}()
+    for p in pairs
+        push!(d, p.first => p.second)
+    end
+    return d
+end
 const FusionTreeDict{K,V} = Dict{K,V}
 #--------------------------------------------------------------------
 

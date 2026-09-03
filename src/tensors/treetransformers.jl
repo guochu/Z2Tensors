@@ -7,39 +7,32 @@ abstract type TreeTransformer end
 
 # struct TrivialTreeTransformer <: TreeTransformer end
 
-struct AbelianTreeTransformer{T,I,N,F1,F2,F3,F4} <: TreeTransformer
+struct AbelianTreeTransformer{T,N1,N2,N3,N4} <: TreeTransformer
     rows::Vector{Int}
     cols::Vector{Int}
     vals::Vector{T}
-    structure_dst::FusionBlockStructure{I,N,F1,F2}
-    structure_src::FusionBlockStructure{I,N,F3,F4}
+    structure_dst::FusionBlockStructure{N1,N2}
+    structure_src::FusionBlockStructure{N3,N4}
 end
 
 function treetransformertype(Vdst, Vsrc)
-    I = sectortype(Vdst)
-    # I === Trivial && return TrivialTreeTransformer
-
-    N = numind(Vdst)
-    F1 = fusiontreetype(I, numout(Vdst))
-    F2 = fusiontreetype(I, numin(Vdst))
-    F3 = fusiontreetype(I, numout(Vsrc))
-    F4 = fusiontreetype(I, numin(Vsrc))
-
-    # if FusionStyle(I) isa UniqueFusion
-        return AbelianTreeTransformer{Int,I,N,F1,F2,F3,F4}
-    # else
-    #     return GenericTreeTransformer{sectorscalartype(I),I,N,F1,F2,F3,F4}
-    # end
+    return AbelianTreeTransformer{Int,numout(Vdst),numin(Vdst),numout(Vsrc),numin(Vsrc)}
 end
 
-function TreeTransformer(transform::Function, Vsrc::HomSpace{S},
-                         Vdst::HomSpace{S}) where {S}
-    I = sectortype(Vdst)
-    # I === Trivial && return TrivialTreeTransformer()
-
+function TreeTransformer(transform::Function, Vsrc::HomSpace,
+                         Vdst::HomSpace)
     structure_dst = fusionblockstructure(Vdst)
     structure_src = fusionblockstructure(Vsrc)
+    return TreeTransformer(transform, structure_src, structure_dst)
+end
 
+function TreeTransformer(transform::Function, tsrc::TensorMap, tdst::TensorMap)
+    return TreeTransformer(transform, tsrc.structure, tdst.structure)
+end
+
+function TreeTransformer(transform::Function,
+                         structure_src::FusionBlockStructure,
+                         structure_dst::FusionBlockStructure)
     rows = Int[]
     cols = Int[]
     vals = Int[]
@@ -65,37 +58,15 @@ end
 
 for (transform, transformer) in ((:permute, :permuter),)
     # ((:permute, :permuter), (:transpose, :transposer))
-    treetransformcache = Symbol("tree", transformer, "cache")
-    usetreetransformcache = Symbol("usetree", transformer, "cache")
     treetransformer = Symbol("tree", transformer)
-    _get_treetransformer = Symbol("_get_", treetransformer)
-    _treetransformer = Symbol("_", treetransformer)
 
     @eval begin
-        const $treetransformcache = LRU{Any,Any}(; maxsize=10^5)
-        const $usetreetransformcache = Ref{Bool}(true)
-
         function $treetransformer(::AbstractTensorMap, ::AbstractTensorMap, p::Index2Tuple)
             return fusiontreetransform(f1, f2) = $transform(f1, f2, p...)
         end
         function $treetransformer(tdst::TensorMap, tsrc::TensorMap, p::Index2Tuple)
-            if $usetreetransformcache[]
-                key = (space(tdst), space(tsrc), p)
-                A = treetransformertype(space(tdst), space(tsrc))
-                return $_get_treetransformer(A, key)
-            else
-                return $_treetransformer((space(tdst), space(tsrc), p))
-            end
-        end
-        @noinline function $_get_treetransformer(A, key)
-            d::A = get!($treetransformcache, key) do
-                return $_treetransformer(key)
-            end
-            return d
-        end
-        function $_treetransformer((Vdst, Vsrc, p))
             fusiontreetransform(f1, f2) = $transform(f1, f2, p...)
-            return TreeTransformer(fusiontreetransform, Vsrc, Vdst)
+            return TreeTransformer(fusiontreetransform, tsrc, tdst)
         end
     end
 end

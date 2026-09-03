@@ -1,23 +1,22 @@
 # DiagonalTensorMap
 #==========================================================#
-struct DiagonalTensorMap{T,S<:IndexSpace,A<:DenseVector{T}} <: AbstractTensorMap{T,S,1,1}
+struct DiagonalTensorMap{T,A<:DenseVector{T}} <: AbstractTensorMap{T,1,1}
     data::A
-    domain::S # equals codomain
+    domain::Z2Space # equals codomain
 
     # uninitialized constructors
-    function DiagonalTensorMap{T,S,A}(::UndefInitializer,
-                                      dom::S) where {T,S<:IndexSpace,A<:DenseVector{T}}
+    function DiagonalTensorMap{T,A}(::UndefInitializer,
+                                      dom::Z2Space) where {T,A<:DenseVector{T}}
         data = A(undef, reduceddim(dom))
         if !isbitstype(T)
             zerovector!(data)
         end
-        return DiagonalTensorMap{T,S,A}(data, dom)
+        return DiagonalTensorMap{T,A}(data, dom)
     end
     # constructors from data
-    function DiagonalTensorMap{T,S,A}(data::A,
-                                      dom::S) where {T,S<:IndexSpace,A<:DenseVector{T}}
-        # T ⊆ field(S) || @warn("scalartype(data) = $T ⊈ $(field(S)))", maxlog = 1)
-        return new{T,S,A}(data, dom)
+    function DiagonalTensorMap{T,A}(data::A,
+                                      dom::Z2Space) where {T,A<:DenseVector{T}}
+        return new{T,A}(data, dom)
     end
 end
 
@@ -25,29 +24,29 @@ end
 #--------------------------------------------
 space(d::DiagonalTensorMap) = d.domain ← d.domain
 
-storagetype(::Type{<:DiagonalTensorMap{T,S,A}}) where {T,S,A<:DenseVector{T}} = A
+storagetype(::Type{<:DiagonalTensorMap{T,A}}) where {T,A<:DenseVector{T}} = A
 
 # DiagonalTensorMap constructors
 #--------------------------------
 # undef constructors
 """
-    DiagonalTensorMap{T}(undef, domain::S) where {T,S<:IndexSpace}
+    DiagonalTensorMap{T}(undef, domain)
     # expert mode: select storage type `A`
-    DiagonalTensorMap{T,S,A}(undef, domain::S) where {T,S<:IndexSpace,A<:DenseVector{T}}
+    DiagonalTensorMap{T,A}(undef, domain)
 
 Construct a `DiagonalTensorMap` with uninitialized data.
 """
-function DiagonalTensorMap{T}(::UndefInitializer, V::S) where {T,S<:IndexSpace}
-    return DiagonalTensorMap{T,S,Vector{T}}(undef, V)
+function DiagonalTensorMap{T}(::UndefInitializer, V::Z2Space) where {T}
+    return DiagonalTensorMap{T,Vector{T}}(undef, V)
 end
 DiagonalTensorMap(::UndefInitializer, V::IndexSpace) = DiagonalTensorMap{Float64}(undef, V)
 
-function DiagonalTensorMap{T}(data::A, V::S) where {T,S<:IndexSpace,A<:DenseVector{T}}
+function DiagonalTensorMap{T}(data::A, V::Z2Space) where {T,A<:DenseVector{T}}
     length(data) == reduceddim(V) ||
         throw(DimensionMismatch("length(data) = $(length(data)) is not compatible with the space $V"))
-    return DiagonalTensorMap{T,S,A}(data, V)
+    return DiagonalTensorMap{T,A}(data, V)
 end
-function DiagonalTensorMap{T}(f::Function, V::S) where {T,S<:IndexSpace}
+function DiagonalTensorMap{T}(f::Function, V::Z2Space) where {T}
     data = f(T, reduceddim(V))
     return DiagonalTensorMap{T}(data, V)
 end
@@ -56,12 +55,12 @@ function DiagonalTensorMap(data::DenseVector{T}, V::IndexSpace) where {T}
     return DiagonalTensorMap{T}(data, V)
 end
 
-function DiagonalTensorMap(t::AbstractTensorMap{T,S,1,1}) where {T,S}
+function DiagonalTensorMap(t::AbstractTensorMap{T,1,1}) where {T}
     isa(t, DiagonalTensorMap) && return t
     domain(t) == codomain(t) ||
         throw(SpaceMismatch("DiagonalTensorMap requires equal domain and codomain"))
     A = storagetype(t)
-    d = DiagonalTensorMap{T,S,A}(undef, space(t, 1))
+    d = DiagonalTensorMap{T,A}(undef, space(t, 1))
     for (c, b) in blocks(d)
         bt = block(t, c)
         # TODO: rewrite in terms of `diagview` from MatrixAlgebraKit.jl
@@ -134,7 +133,7 @@ function block(d::DiagonalTensorMap, s::Sector)
 end
 
 blocks(t::DiagonalTensorMap) = BlockIterator(t, diagonalblockstructure(space(t)))
-function blocktype(::Type{DiagonalTensorMap{T,S,A}}) where {T,S,A}
+function blocktype(::Type{DiagonalTensorMap{T,A}}) where {T,A}
     return Diagonal{T,SubArray{T,1,A,Tuple{UnitRange{Int}},true}}
 end
 
@@ -154,8 +153,8 @@ end
 # Indexing and getting and setting the data at the subblock level
 #-----------------------------------------------------------------
 @inline function Base.getindex(d::DiagonalTensorMap,
-                               f₁::FusionTree{I,1},
-                               f₂::FusionTree{I,1}) where {I<:Sector}
+                               f₁::FusionTree{1},
+                               f₂::FusionTree{1}) 
     s = f₁.uncoupled[1]
     s == f₁.coupled == f₂.uncoupled[1] == f₂.coupled || throw(SectorMismatch())
     return block(d, s)
@@ -164,8 +163,8 @@ end
 
 function Base.setindex!(d::DiagonalTensorMap,
                         v,
-                        f₁::FusionTree{I,1},
-                        f₂::FusionTree{I,1}) where {I<:Sector}
+                        f₁::FusionTree{1},
+                        f₂::FusionTree{1}) 
     return copy!(getindex(d, f₁, f₂), v)
 end
 
@@ -190,7 +189,7 @@ end
 # ----------------
 function TO.tensoradd_type(TC, A::DiagonalTensorMap, ::Index2Tuple{1,1}, ::Bool)
     M = similarstoragetype(A, TC)
-    return DiagonalTensorMap{TC,spacetype(A),M}
+    return DiagonalTensorMap{TC,M}
 end
 
 function TO.tensorcontract_type(TC, A::DiagonalTensorMap, ::Index2Tuple{1,1}, ::Bool,
@@ -200,18 +199,18 @@ function TO.tensorcontract_type(TC, A::DiagonalTensorMap, ::Index2Tuple{1,1}, ::
     M == similarstoragetype(B, TC) ||
         throw(ArgumentError("incompatible storage types:\n$(M) ≠ $(similarstoragetype(B, TC))"))
     spacetype(A) == spacetype(B) || throw(SpaceMismatch("incompatible space types"))
-    return DiagonalTensorMap{TC,spacetype(A),M}
+    return DiagonalTensorMap{TC,M}
 end
 
-function TO.tensoralloc(::Type{DiagonalTensorMap{T,S,M}},
-                        structure::TensorMapSpace{S,1,1},
+function TO.tensoralloc(::Type{DiagonalTensorMap{T,M}},
+                        structure::TensorMapSpace{1,1},
                         istemp::Val,
-                        allocator=TO.DefaultAllocator()) where {T,S,M}
+                        allocator=TO.DefaultAllocator()) where {T,M}
     domain(structure) == codomain(structure) || throw(ArgumentError("domain ≠ codomain"))
     V = only(domain(structure))
     dim = reduceddim(V)
     data = TO.tensoralloc(M, dim, istemp, allocator)
-    return DiagonalTensorMap{T,S,M}(data, V)
+    return DiagonalTensorMap{T,M}(data, V)
 end
 
 # Linear Algebra and factorizations

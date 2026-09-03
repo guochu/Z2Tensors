@@ -91,7 +91,7 @@ function MAK.initialize_output(::typeof(svd_compact!), t::AbstractTensorMap, ::A
     U = similar(t, codomain(t) ← V_cod)
     rt = real(scalartype(t))
     mem = storagetype(t).parameters[3]
-    S = DiagonalTensorMap{rt, typeof(V_cod), CuArray{rt,1,mem}}(undef, V_cod)
+    S = DiagonalTensorMap{rt, CuArray{rt,1,mem}}(undef, V_cod)
     Vᴴ = similar(t, V_dom ← domain(t))
     return U, S, Vᴴ
 end

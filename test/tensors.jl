@@ -20,7 +20,7 @@ for V in spacelist
                 @test codomain(t) == W
                 @test space(t) == (W ← one(W))
                 @test domain(t) == one(W)
-                @test typeof(t) == TensorMap{T,spacetype(t),5,0,Vector{T}}
+                @test typeof(t) == tensormaptype(5, 0, Vector{T})
                 # blocks
                 bs = @constinferred blocks(t)
                 (c, b1), state = @constinferred Nothing iterate(bs)
@@ -274,6 +274,71 @@ for V in spacelist
 
                 @test HrA12array ≈ convert(Array, HrA12)
             end
+        end
+        @timedtestset "Tensor notation" begin
+            # non-dual spaces from the current symmetry sector list
+            W1, W2, W3 = V1, V4, V5
+            A = randn(ComplexF64, W2 ⊗ W3 ← W1)
+            B = randn(ComplexF64, W1 ← W2)
+            C = randn(ComplexF64, W1 ← W3)
+            E = randn(ComplexF64, W3 ← W1)
+            Aa = convert(Array, A) # axes (i2, i3, i1)
+            Ba = convert(Array, B) # axes (i4, i2)
+            Ca = convert(Array, C) # axes (i5, i3)
+            Ea = convert(Array, E) # axes (i6, i5)
+
+            # `=`: two-tensor contraction, compared against naive dense einsum
+            @tensor D[3 4; 1] := A[2 3; 1] * B[4; 2]
+            Da = zeros(complex(scalartype(A)), dim(W3), dim(W1), dim(W1))
+            for i1 in 1:dim(W1), i2 in 1:dim(W2), i3 in 1:dim(W3), i4 in 1:dim(W1)
+                Da[i3, i4, i1] += Aa[i2, i3, i1] * Ba[i4, i2]
+            end
+            @test convert(Array, D) ≈ Da
+
+            # `+=`: accumulation into an existing destination tensor
+            D0 = randn(ComplexF64, W3 ⊗ W1 ← W1)
+            D2 = copy(D0)
+            @tensor D2[3 4; 1] += A[2 3; 1] * B[4; 2]
+            @test D2 ≈ D0 + D
+
+            # scalar coefficients in combination with `+=`
+            F = copy(D0)
+            @tensor F[3 4; 1] += 2.5 * A[2 3; 1] * B[4; 2]
+            @test F ≈ D0 + 2.5 * D
+            # scalar in the middle / at the end, and complex scalars
+            F2 = copy(D0)
+            @tensor F2[3 4; 1] += A[2 3; 1] * (2.5 + 1.5im) * B[4; 2]
+            F3 = copy(D0)
+            @tensor F3[3 4; 1] += A[2 3; 1] * B[4; 2] * (2.5 + 1.5im)
+            @test F2 ≈ F3 ≈ D0 + (2.5 + 1.5im) * D
+
+            # multi-tensor contraction: direct, sequentially parenthesized,
+            # and alternative parenthesizations all agree (and match dense einsum)
+            @tensor Ed[4 5; 1] := A[2 3; 1] * B[4; 2] * C[5; 3]
+            @tensor Es[4 5; 1] := (A[2 3; 1] * B[4; 2]) * C[5; 3]
+            @tensor Ep[4 5; 1] := A[2 3; 1] * (B[4; 2] * C[5; 3])
+            E3a = zeros(complex(scalartype(A)), dim(W1), dim(W1), dim(W1))
+            for i1 in 1:dim(W1), i2 in 1:dim(W2), i3 in 1:dim(W3), i4 in 1:dim(W1),
+                i5 in 1:dim(W1)
+                E3a[i4, i5, i1] += Aa[i2, i3, i1] * Ba[i4, i2] * Ca[i5, i3]
+            end
+            @test Ed ≈ Es ≈ Ep
+            @test convert(Array, Ed) ≈ E3a
+
+            # four-tensor network with nested parentheses on the right-hand side
+            @tensor X[1 6; 4] := B[1; 2] * (A[2 3; 4] * (C[5; 3] * E[6; 5]))
+            @tensor Y[1 6; 4] := (((B[1; 2] * A[2 3; 4]) * C[5; 3]) * E[6; 5])
+            Xa = zeros(complex(scalartype(A)), dim(W1), dim(W3), dim(W1))
+            for i1 in 1:dim(W1), i2 in 1:dim(W2), i3 in 1:dim(W3), i4 in 1:dim(W1),
+                i5 in 1:dim(W1), i6 in 1:dim(W3)
+                Xa[i1, i6, i4] += Ba[i1, i2] * Aa[i2, i3, i4] * Ca[i5, i3] * Ea[i6, i5]
+            end
+            @test X ≈ Y
+            @test convert(Array, X) ≈ Xa
+
+            # adjoint tensors and scalar output
+            @tensor Z[] := A'[1; 2 3] * A[2 3; 1]
+            @test scalar(Z) ≈ norm(A)^2
         end
         @timedtestset "diag/diagm" begin
             W = V1 ⊗ V2 ⊗ V3 ← V4 ⊗ V5

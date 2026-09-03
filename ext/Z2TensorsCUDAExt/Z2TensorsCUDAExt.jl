@@ -19,18 +19,18 @@ export tocu, fromcu, CuTensorMap, CuDiagonalTensorMap, CuAdjointTensorMap
 
 
 
-const CuTensorMap{T,S,N₁,N₂,A} = TensorMap{T,S,N₁,N₂,A} where {T,S<:ElementarySpace,N₁,N₂,A<:CuArray{T,1}}
-const CuAdjointTensorMap{T,S,N₁,N₂,A} = AdjointTensorMap{T,S,N₁,N₂,A} where {T,S<:ElementarySpace,N₁,N₂,A<:CuTensorMap}
+const CuTensorMap{T,N₁,N₂,A} = TensorMap{T,N₁,N₂,A} where {T,N₁,N₂,A<:CuArray{T,1}}
+const CuAdjointTensorMap{T,N₁,N₂,A} = AdjointTensorMap{T,N₁,N₂,A} where {T,N₁,N₂,A<:CuTensorMap}
 
 # convert a TensorMap to CuTensor
 # TODO: togpu, fromgpu
-function tocu(t::TensorMap{T,S,N₁,N₂,A}) where {T,S,N₁,N₂,A<:Array}
+function tocu(t::TensorMap{T,N₁,N₂,A}) where {T,N₁,N₂,A<:Array}
     data = CuArray(t.data)
-    return TensorMap{T,S,N₁,N₂,typeof(data)}(data, t.space)
+    return TensorMap{T,N₁,N₂,typeof(data)}(data, t.space)
 end
-function fromcu(t::CuTensorMap{T,S,N₁,N₂}) where {T,S,N₁,N₂}
+function fromcu(t::CuTensorMap{T,N₁,N₂}) where {T,N₁,N₂}
     data = Array(t.data)
-    return TensorMap{T,S,N₁,N₂,typeof(data)}(data, t.space)
+    return TensorMap{T,N₁,N₂,typeof(data)}(data, t.space)
 end
 
 
@@ -47,15 +47,15 @@ function Base.copy!(tdst::CuTensorMap, tsrc::CuAdjointTensorMap)
 end
 
 
-const CuDiagonalTensorMap{T,S,A} = DiagonalTensorMap{T,S,A} where {T,S<:ElementarySpace,A<:CuArray{T,1}}
+const CuDiagonalTensorMap{T,A} = DiagonalTensorMap{T,A} where {T,A<:CuArray{T,1}}
 
-function tocu(t::DiagonalTensorMap{T,S,A}) where {T,S,A<:Array}
+function tocu(t::DiagonalTensorMap{T,A}) where {T,A<:Array}
     data = CuArray(t.data)
-    return DiagonalTensorMap{T,S,typeof(data)}(data, t.domain)
+    return DiagonalTensorMap{T,typeof(data)}(data, t.domain)
 end
-function fromcu(t::CuDiagonalTensorMap{T,S}) where {T,S}
+function fromcu(t::CuDiagonalTensorMap{T}) where {T}
     data = Array(t.data)
-    return DiagonalTensorMap{T,S,typeof(data)}(data, t.domain)
+    return DiagonalTensorMap{T,typeof(data)}(data, t.domain)
 end
 
    

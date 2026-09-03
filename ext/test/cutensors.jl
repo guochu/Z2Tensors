@@ -25,7 +25,8 @@ for V in spacelist
                 @test codomain(t) == W
                 @test space(t) == (W ← one(W))
                 @test domain(t) == one(W)
-                @test typeof(t) == TensorMap{T, spacetype(t), 5, 0, CuArray{T, 1, CUDA.DeviceMemory}}
+                @test typeof(t) <:
+                      TensorMap{T, spacetype(t), 5, 0, CuArray{T, 1, CUDA.DeviceMemory}}
                 # blocks
                 bs = @constinferred blocks(t)
                 (c, b1), state = @constinferred Nothing iterate(bs)

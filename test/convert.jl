@@ -21,11 +21,11 @@ end
 
 
 # converting to actual array
-function Base.convert(A::Type{<:AbstractArray}, f::FusionTree{I,0}) where {I}
-    X = convert(A, fusiontensor(one(I), one(I), one(I)))[1, 1, :]
+function Base.convert(A::Type{<:AbstractArray}, f::FusionTree{0})  
+    X = convert(A, fusiontensor(one(Z2Irrep), one(Z2Irrep), one(Z2Irrep)))[1, 1, :]
     return X
 end
-function Base.convert(A::Type{<:AbstractArray}, f::FusionTree{I,1}) where {I}
+function Base.convert(A::Type{<:AbstractArray}, f::FusionTree{1})  
     c = f.coupled
     # if f.isdual[1]
     #     sqrtdc = sqrtdim(c)
@@ -37,7 +37,7 @@ function Base.convert(A::Type{<:AbstractArray}, f::FusionTree{I,1}) where {I}
     return X
 end
 
-function Base.convert(A::Type{<:AbstractArray}, f::FusionTree{I,2}) where {I}
+function Base.convert(A::Type{<:AbstractArray}, f::FusionTree{2})  
     a, b = f.uncoupled
     c = f.coupled
     μ = 1
@@ -54,7 +54,7 @@ function Base.convert(A::Type{<:AbstractArray}, f::FusionTree{I,2}) where {I}
     return X
 end
 
-function Base.convert(A::Type{<:AbstractArray}, f::FusionTree{I,N}) where {I,N}
+function Base.convert(A::Type{<:AbstractArray}, f::FusionTree{N}) where {N}
     c12 = couple((f.uncoupled[1], f.uncoupled[2]))
     tailout = (c12, TupleTools.tail2(f.uncoupled)...)
     # isdualout = (false, TupleTools.tail2(f.isdual)...)
@@ -75,7 +75,7 @@ end
 
 # TODO: is this piracy?
 function Base.convert(A::Type{<:AbstractArray},
-                      (f₁, f₂)::Tuple{FusionTree{I},FusionTree{I}}) where {I}
+                      (f₁, f₂)::Tuple{FusionTree,FusionTree})  
     F₁ = convert(A, f₁)
     F₂ = convert(A, f₂)
     sz1 = size(F₁)
@@ -90,8 +90,8 @@ end
 
 
 # axes
-Base.axes(V::GradedSpace) = Base.OneTo(dim(V))
-function Base.axes(V::GradedSpace{I}, c::I) where {I<:Sector}
+Base.axes(V::Z2Space) = Base.OneTo(dim(V))
+function Base.axes(V::Z2Space, c::Z2Irrep)
     offset = 0
     for c′ in sectors(V)
         c′ == c && break
@@ -101,7 +101,7 @@ function Base.axes(V::GradedSpace{I}, c::I) where {I<:Sector}
 end
 Base.axes(P::ProductSpace) = map(axes, P.spaces)
 Base.axes(P::ProductSpace, n::Int) = axes(P.spaces[n])
-function Base.axes(P::ProductSpace{<:ElementarySpace,N},
+function Base.axes(P::ProductSpace{N},
                    sectors::NTuple{N,<:Sector}) where {N}
     return map(axes, P.spaces, sectors)
 end

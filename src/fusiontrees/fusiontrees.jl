@@ -1,37 +1,30 @@
 
-struct FusionTree{I<:Sector,N}
-    uncoupled::NTuple{N,I}
-    coupled::I
-    function FusionTree{I,N}(uncoupled::NTuple{N,I}, coupled::I) where {I<:Sector,N}
-        return new{I,N}(uncoupled, coupled)
+struct FusionTree{N}
+    uncoupled::NTuple{N,Z2Irrep}
+    coupled::Z2Irrep
+    function FusionTree{N}(uncoupled::NTuple{N,Z2Irrep}, coupled::Z2Irrep) where {N}
+        return new{N}(uncoupled, coupled)
     end
 end
 
-function FusionTree{I}(uncoupled::NTuple{N,I}, coupled=one(I)) where {I<:Sector,N}
-    return FusionTree{I,N}(map(s -> convert(I, s), uncoupled), convert(I, coupled))
+function FusionTree(uncoupled::NTuple{N,Z2Irrep}, coupled::Z2Irrep = unit(Z2Irrep)) where {N}
+    return FusionTree{N}(uncoupled, coupled)
 end
-FusionTree(uncoupled::NTuple{N,I}, coupled::I = unit(I)) where {I<:Sector,N} = FusionTree{I,N}(uncoupled, coupled)
-# FusionTree(uncoupled::NTuple{N,I}) where {I<:Sector,N} = FusionTree{I,N}(uncoupled, one(I))
 
 
 
 # Properties
-sectortype(::Type{<:FusionTree{I}}) where {I<:Sector} = I
-# FusionStyle(::Type{<:FusionTree{I}}) where {I<:Sector} = FusionStyle(I)
-# BraidingStyle(::Type{<:FusionTree{I}}) where {I<:Sector} = BraidingStyle(I)
-Base.length(::Type{<:FusionTree{<:Sector,N}}) where {N} = N
-
-sectortype(f::FusionTree) = sectortype(typeof(f))
-# FusionStyle(f::FusionTree) = FusionStyle(typeof(f))
-# BraidingStyle(f::FusionTree) = BraidingStyle(typeof(f))
+sectortype(::Type{<:FusionTree}) = Z2Irrep
+sectortype(f::FusionTree) = Z2Irrep
 Base.length(f::FusionTree) = length(typeof(f))
+Base.length(::Type{<:FusionTree{N}}) where {N} = N
 
 # Hashing, important for using fusion trees as key in a dictionary
-function Base.hash(f::FusionTree{I}, h::UInt) where {I}
+function Base.hash(f::FusionTree, h::UInt)
     h = hash(f.coupled, hash(f.uncoupled, h))
     return h
 end
-function Base.:(==)(f₁::FusionTree{I,N}, f₂::FusionTree{I,N}) where {I<:Sector,N}
+function Base.:(==)(f₁::FusionTree{N}, f₂::FusionTree{N}) where {N}
     f₁.coupled == f₂.coupled || return false
     @inbounds for i in 1:N
         f₁.uncoupled[i] == f₂.uncoupled[i] || return false
@@ -41,9 +34,7 @@ end
 Base.:(==)(f₁::FusionTree, f₂::FusionTree) = false
 
 # Facilitate getting correct fusion tree types
-function fusiontreetype(::Type{I}, N::Int) where {I<:Sector}
-    return FusionTree{I,N}
-end
+fusiontreetype(N::Int) = FusionTree{N}
 
 
 

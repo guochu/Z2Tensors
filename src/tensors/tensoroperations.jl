@@ -6,10 +6,10 @@ function TO.tensorstructure(t::AbstractTensorMap, iA::Int, conjA::Bool)
 end
 
 function TO.tensoralloc(::Type{TT},
-                        structure::TensorMapSpace{S,N₁,N₂},
+                        structure::TensorMapSpace{N₁,N₂},
                         istemp::Val,
                         allocator=TO.DefaultAllocator()) where
-         {T,S,N₁,N₂,TT<:AbstractTensorMap{T,S,N₁,N₂}}
+         {T,N₁,N₂,TT<:AbstractTensorMap{T,N₁,N₂}}
     A = storagetype(TT)
     dim = fusionblockstructure(structure).totaldim
     data = TO.tensoralloc(A, dim, istemp, allocator)
@@ -25,7 +25,7 @@ end
 TO.tensorscalar(t::AbstractTensorMap) = scalar(t)
 
 function _canonicalize(p::Index2Tuple{N₁,N₂},
-                       ::AbstractTensorMap{<:IndexSpace,N₁,N₂}) where {N₁,N₂}
+                       ::AbstractTensorMap{N₁,N₂}) where {N₁,N₂}
     return p
 end
 _canonicalize(p::Index2Tuple, t::AbstractTensorMap) = _canonicalize(linearize(p), t)
@@ -53,7 +53,7 @@ end
 function TO.tensoradd_type(TC, A::AbstractTensorMap, ::Index2Tuple{N₁,N₂},
                            ::Bool) where {N₁,N₂}
     M = similarstoragetype(A, TC)
-    return tensormaptype(spacetype(A), N₁, N₂, M)
+    return tensormaptype(N₁, N₂, M)
 end
 
 function TO.tensoradd_structure(A::AbstractTensorMap, pA::Index2Tuple{N₁,N₂},
@@ -117,7 +117,7 @@ function TO.tensorcontract_type(TC,
     M == similarstoragetype(B, TC) ||
         throw(ArgumentError("incompatible storage types:\n$(M) ≠ $(similarstoragetype(B, TC))"))
     spacetype(A) == spacetype(B) || throw(SpaceMismatch("incompatible space types"))
-    return tensormaptype(spacetype(A), N₁, N₂, M)
+    return tensormaptype(N₁, N₂, M)
 end
 
 function TO.tensorcontract_structure(A::AbstractTensorMap, pA::Index2Tuple, conjA::Bool,

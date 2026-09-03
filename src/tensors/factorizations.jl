@@ -63,7 +63,7 @@ function leftorth!(t::TensorMap{<:RealOrComplexFloat};
         atol = max(atol, rtol * norm(t))
     end
     I = sectortype(t)
-    dims = SectorDict{I,Int}()
+    dims = SectorDict{Int}()
 
     # compute QR factorization for each block
     if !isempty(blocks(t))
@@ -114,7 +114,7 @@ function rightorth!(t::TensorMap{<:RealOrComplexFloat};
         atol = max(atol, rtol * norm(t))
     end
     I = sectortype(t)
-    dims = SectorDict{I,Int}()
+    dims = SectorDict{Int}()
 
     # compute LQ factorization for each block
     if !isempty(blocks(t))
@@ -208,7 +208,7 @@ end
 function _compute_svddata!(t::TensorMap, alg::Union{SVD,SDD})
     # InnerProductStyle(t) === EuclideanInnerProduct() || throw_invalid_innerproduct(:tsvd!)
     I = sectortype(t)
-    dims = SectorDict{I,Int}()
+    dims = SectorDict{Int}()
     generator = Base.Iterators.map(blocks(t)) do (c, b)
         # U, Σ, V = MatrixAlgebra.svd!(b, alg)
         U, Σ, V = _svd!(b, alg)
@@ -226,7 +226,7 @@ function _create_svdtensors(t::TensorMap{<:RealOrComplexFloat}, SVDdata, dims)
 
     Tr = real(T)
     A = similarstoragetype(t, Tr)
-    Σ = DiagonalTensorMap{Tr,S,A}(undef, W)
+    Σ = DiagonalTensorMap{Tr,A}(undef, W)
 
     U = similar(t, codomain(t) ← W)
     V⁺ = similar(t, W ← domain(t))
@@ -243,12 +243,12 @@ function _empty_svdtensors(t::TensorMap{<:RealOrComplexFloat})
     T = scalartype(t)
     S = spacetype(t)
     I = sectortype(t)
-    dims = SectorDict{I,Int}()
+    dims = SectorDict{Int}()
     W = S(dims)
 
     Tr = real(T)
     A = similarstoragetype(t, Tr)
-    Σ = DiagonalTensorMap{Tr,S,A}(undef, W)
+    Σ = DiagonalTensorMap{Tr,A}(undef, W)
 
     U = similar(t, codomain(t) ← W)
     V⁺ = similar(t, W ← domain(t))

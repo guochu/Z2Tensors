@@ -15,18 +15,18 @@ const TK = Z2Tensors
 
 Random.seed!(1234)
 
-smallset(::Type{I}) where {I<:Sector} = take(values(I), 5)
-function randsector(::Type{I}) where {I<:Sector}
-    s = collect(smallset(I))
+smallset(::Type{Z2Irrep}) = (Z2Irrep(0), Z2Irrep(1))
+function randsector(::Type{Z2Irrep})
+    s = collect(smallset(Z2Irrep))
     a = rand(s)
     while a == one(a) # don't use trivial label
         a = rand(s)
     end
     return a
 end
-function hasfusiontensor(I::Type{<:Sector})
+function hasfusiontensor(::Type{Z2Irrep})
     try
-        fusiontensor(one(I), one(I), one(I))
+        fusiontensor(one(Z2Irrep), one(Z2Irrep), one(Z2Irrep))
         return true
     catch e
         if e isa MethodError
@@ -55,4 +55,7 @@ include("convert.jl")
 include("spaces.jl")
 include("tensors.jl")
 include("diagonal.jl")
+
+# consistency with TensorKit.jl
+include("compare_tensorkit.jl")
 
