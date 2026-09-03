@@ -31,6 +31,21 @@ for V in spacelist
                 @test eltype(bs) === typeof(b1) === TK.blocktype(t)
             end
         end
+        @timedtestset "empty tensor constructors" begin
+            for (N₁, N₂) in ((0, 0), (1, 1), (2, 3), (5, 0))
+                TT = TensorMap{Float64, N₁, N₂, Vector{Float64}}
+                t = @constinferred empty(TT)
+                @test t isa TT
+                @test numind(t) == N₁ + N₂
+                # each leg is its own (zero) space: no fusion into a single space
+                @test codomain(t) == ProductSpace{N₁}(ntuple(_ -> zero(Z2Space), N₁))
+                @test domain(t) == ProductSpace{N₂}(ntuple(_ -> zero(Z2Space), N₂))
+                @test dim(t) == (N₁ + N₂ == 0 ? 1 : 0)
+                t2 = empty(t)
+                @test t2 isa typeof(t)
+                @test space(t2) == space(t)
+            end
+        end
         @timedtestset "Tensor Dict conversion" begin
             W = V1 ⊗ V2 ⊗ V3 ← V4 ⊗ V5
             for T in (Int, Float32, ComplexF64)

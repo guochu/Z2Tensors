@@ -80,6 +80,7 @@ function fuse(V₁::Z2Space, V₂::Z2Space, V₃::Z2Space...)
     return fuse(fuse(V₁, V₂), V₃...)
 end
 fuse(V::Z2Space) = V
+fuse(v::NTuple{N, Z2Space}) where {N} = N == 0 ? oneunit(Z2Space) : fuse(v...)
 
 function infimum(V₁::Z2Space, V₂::Z2Space)
     if V₁.dual == V₂.dual

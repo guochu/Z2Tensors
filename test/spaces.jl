@@ -2,6 +2,17 @@ println("------------------------------------")
 println("|     Fields and vector spaces     |")
 println("------------------------------------")
 @timedtestset "Fields and vector spaces" verbose = true begin
+    @timedtestset "fuse" begin
+        for (V1, V2, V3, V4, V5) in (VZ2,)
+            # fuse accepts tuples, including the empty tuple (unit object)
+            @test @constinferred fuse(()) == oneunit(Z2Space)
+            @test fuse((V1,)) == V1
+            @test fuse((V1, V2)) == fuse(V1, V2)
+            @test fuse((V1, V2, V3)) == fuse(fuse(V1, V2), V3)
+            @test fuse((V1, V1')) == Z2Space(0 => 2, 1 => 2)
+            @test fuse(ntuple(_ -> zero(Z2Space), 3)) == zero(Z2Space)
+        end
+    end
     @timedtestset "HomSpace" begin
         for (V1, V2, V3, V4, V5) in (VZ2,)
             W = TK.HomSpace(V1 ⊗ V2, V3 ⊗ V4 ⊗ V5)

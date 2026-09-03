@@ -373,7 +373,8 @@ end
 
 function Base.empty(::Type{<:TensorMap{T,N₁,N₂,A}}) where {T,N₁,N₂,
                                                                 A<:DenseVector{T}}
-    space = fuse(ntuple(_ -> zero(Z2Space), N₁)) ← fuse(ntuple(_ -> zero(Z2Space), N₂))
+    space = ProductSpace{N₁}(ntuple(_ -> zero(Z2Space), N₁)) ←
+            ProductSpace{N₂}(ntuple(_ -> zero(Z2Space), N₂))
     TensorMap{T,N₁,N₂,A}(undef, space)
 end
 Base.empty(t::TensorMap) = empty(typeof(t))
