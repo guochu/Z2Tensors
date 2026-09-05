@@ -43,7 +43,7 @@ end
 # Matrix level factorizations, implemented via MatrixAlgebraKit
 #---------------------------------------------------------------
 using MatrixAlgebraKit: MatrixAlgebraKit, trunctol,
-                        LAPACK_QRIteration, LAPACK_DivideAndConquer
+                        QRIteration, SafeDivideAndConquer
 
 function leftorth!(A::StridedMatrix{<:BlasFloat}, alg::Union{QR,QRpos}, atol::Real)
     iszero(atol) || throw(ArgumentError("nonzero atol not supported by $alg"))
@@ -74,7 +74,9 @@ function rightorth!(A::StridedMatrix{<:BlasFloat}, alg::Polar, atol::Real)
 end
 
 function _svd!(A::StridedMatrix{T}, alg::Union{SVD,SDD}) where {T<:BlasFloat}
-    svdalg = alg isa SVD ? LAPACK_QRIteration() : LAPACK_DivideAndConquer()
+    # SVD -> QR iteration (gesvd); SDD -> safe divide and conquer (gesdd with
+    # fallback to gesvd if it fails to converge)
+    svdalg = alg isa SVD ? QRIteration() : SafeDivideAndConquer()
     U, S, Vᴴ = MatrixAlgebraKit.svd_compact!(A; alg = svdalg)
     return U, S.diag, Vᴴ
 end
