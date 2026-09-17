@@ -198,6 +198,15 @@ for V in spacelist
                         U, S, V, ϵ = tsvd(t; trunc=truncbelow(1 / dim(domain(S₀))), p=p)
                         U′, S′, V′, ϵ′ = tsvd(t; trunc=truncspace(space(S, 1)), p=p)
                         @test (U, S, V, ϵ) == (U′, S′, V′, ϵ′)
+                        # relative truncation: truncrelerr(ϵ) == truncbelow(ϵ * ‖Σ‖_p)
+                        Uf, Sf, Vf, = tsvd(t)
+                        σs = Float64[]
+                        for (c, b) in blocks(Sf)
+                            append!(σs, Array(LinearAlgebra.diag(b)))
+                        end
+                        Ur, Sr, Vr, ϵr = tsvd(t; trunc=truncrelerr(1 / dim(domain(S₀))), p=p)
+                        Ub, Sb, Vb, ϵb = tsvd(t; trunc=truncbelow((1 / dim(domain(S₀))) * norm(σs, p)), p=p)
+                        @test (Ur, Sr, Vr, ϵr) == (Ub, Sb, Vb, ϵb)
                     end
                 end
             end

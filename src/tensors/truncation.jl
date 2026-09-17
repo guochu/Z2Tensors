@@ -170,21 +170,49 @@ end
 # relative ϵ
 
 """
-    struct TruncationDimCutoff
-truncate singular values below ϵ first, if the remaining bond dimension is larger than dim, then truncate it below dim.
+    struct TruncateDimCutoff
+first normalize the singular value spectrum by its p-norm, then truncate singular
+values below the relative cutoff ϵ; if the remaining bond dimension is larger than D,
+truncate it below D. The largest add_back singular values are kept even if they fall
+below the cutoff.
 Return the p-norm of the truncated singular values.
 """
-struct TruncationDimCutoff <: TruncationScheme
+struct TruncateDimCutoff <: TruncationScheme
     D::Int
     ϵ::Float64
     add_back::Int
+    function TruncateDimCutoff(D::Int, ϵ::Real, add_back::Int)
+        add_back <= D ||
+            throw(ArgumentError("add_back (= $add_back) cannot be larger than D (= $D)"))
+        return new(D, ϵ, add_back)
+    end
 end
-TruncationDimCutoff(;D::Int, ϵ::Real, add_back::Int=0) = TruncationDimCutoff(D, convert(Float64, ϵ), min(add_back, D))
-truncdimcutoff(D::Int, epsilon::Real; add_back::Int=0) = TruncationDimCutoff(D, epsilon, add_back)
-truncdimcutoff(; D::Int, ϵ::Real, add_back::Int=0) = TruncationDimCutoff(D, convert(Float64, ϵ), min(add_back, D))
+TruncateDimCutoff(; D::Int, ϵ::Real, add_back::Int = 0) =
+    TruncateDimCutoff(D, convert(Float64, ϵ), add_back)
+truncdimcutoff(D::Int, epsilon::Real; add_back::Int = 0) =
+    TruncateDimCutoff(D, epsilon, add_back)
+truncdimcutoff(; D::Int, ϵ::Real, add_back::Int = 0) =
+    TruncateDimCutoff(D, convert(Float64, ϵ), add_back)
+
+"""
+    struct TruncateRelError
+truncate singular values below a relative cutoff ϵ, i.e. the singular value vector is
+first normalized (using its p-norm) and singular values below ϵ are discarded; if fewer
+than `add_back` singular values remain, keep `add_back` of them.
+"""
+struct TruncateRelError <: TruncationScheme
+    ϵ::Float64
+    add_back::Int
+end
+TruncateRelError(; ϵ::Real, add_back::Int = 0) =
+    TruncateRelError(convert(Float64, ϵ), add_back)
+truncrelerr(epsilon::Real, add_back::Int = 0) =
+    TruncateRelError(convert(Float64, epsilon), add_back)
+truncrelerr(; ϵ::Real, add_back::Int = 0) =
+    TruncateRelError(convert(Float64, ϵ), add_back)
 
 compute_size(v::AbstractVector) = length(v)
-function compute_size(v::AbstractDict) 
+function compute_size(v::AbstractDict)
     init = 0
     for (c, b) in v
         init += dim(c) * b
@@ -192,11 +220,16 @@ function compute_size(v::AbstractDict)
     return init
 end
 
-function _compute_truncdim(Σdata, trunc::TruncationDimCutoff, p=2)
-    n = _norm(Σdata, p, 0.)
+function _compute_truncdim(Σdata, trunc::TruncateDimCutoff, p = 2)
+    n = _norm(Σdata, p, 0.0)
     truncdim1 = _compute_truncdim(Σdata, truncbelow(trunc.ϵ * n, trunc.add_back), p)
     if compute_size(truncdim1) <= trunc.D
         return truncdim1
     end
     return _compute_truncdim(Σdata, truncdim(trunc.D), p)
+end
+
+function _compute_truncdim(Σdata, trunc::TruncateRelError, p = 2)
+    n = _norm(Σdata, p, 0.0)
+    return _compute_truncdim(Σdata, truncbelow(trunc.ϵ * n, trunc.add_back), p)
 end

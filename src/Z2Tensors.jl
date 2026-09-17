@@ -59,7 +59,8 @@ export @tensor, @tensoropt, @ncon, ncon
 export scalar, add!, contract!
 
 # truncation schemes
-export notrunc, truncerr, truncdim, truncspace, truncbelow, truncdimcutoff
+export TruncateDimCutoff, TruncateRelError
+export notrunc, truncerr, truncdim, truncspace, truncbelow, truncdimcutoff, truncrelerr
 
 # Imports
 #---------

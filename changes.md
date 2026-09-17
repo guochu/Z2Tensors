@@ -41,6 +41,14 @@
   - 支持通过右端括号改变收缩顺序
   - 支持伴随张量、`conj`、标量系数、标量输出
 
+## 截断方案接口调整
+
+- `TruncationDimCutoff` 改名为 `TruncateDimCutoff`；便捷构造函数 `truncdimcutoff` 保留不变。
+- 新增 `TruncateRelError`（字段 `ϵ::Float64`、`add_back::Int`）与构造函数 `truncrelerr(ϵ[, add_back])` / `truncrelerr(; ϵ, add_back)`：
+  - 行为类似 `TruncationCutoff`（`truncbelow`），但使用相对截断：先把奇异值矢量按其 p-范数归一化，再丢弃小于 `ϵ` 的奇异值；
+  - 若剩余奇异值个数少于 `add_back`，则保留 `add_back` 个（即相对版 `TruncateDimCutoff`，去掉了固定 `D` 截断环节）。
+- 两者均已导出。
+
 ## 其他
 
 - 空空间构造新增 `Z2Space(; dual)` 方法（factorizations 内 `S(dims)` 空 dict splat 需要）。

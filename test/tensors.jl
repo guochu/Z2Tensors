@@ -458,6 +458,39 @@ for V in spacelist
                         U, S, V, ϵ = tsvd(t; trunc=truncbelow(1 / dim(domain(S₀))), p=p)
                         U′, S′, V′, ϵ′ = tsvd(t; trunc=truncspace(space(S, 1)), p=p)
                         @test (U, S, V, ϵ) == (U′, S′, V′, ϵ′)
+                        # relative truncation: truncrelerr(ϵ) == truncbelow(ϵ * ‖Σ‖_p)
+                        # with ‖Σ‖_p accumulated in Float64 like the internal _norm
+                        Uf, Sf, Vf, = tsvd(t)
+                        σs = Float64[]
+                        for (c, b) in blocks(Sf)
+                            append!(σs, LinearAlgebra.diag(b))
+                        end
+                        Ur, Sr, Vr, ϵr = tsvd(t; trunc=truncrelerr(1 / dim(domain(S₀))), p=p)
+                        Ub, Sb, Vb, ϵb = tsvd(t; trunc=truncbelow((1 / dim(domain(S₀))) * norm(σs, p)), p=p)
+                        @test (Ur, Sr, Vr, ϵr) == (Ub, Sb, Vb, ϵb)
+                        # add_back keeps at least that many singular values
+                        Ua, Sa, Va, ϵa = tsvd(t; trunc=truncrelerr(1.0, dim(domain(S₀))), p=p)
+                        @test dim(domain(Sa)) == dim(domain(S₀))
+                        @test ϵa ≈ 0 atol = sqrt(eps(real(T))) * 10
+                        # add_back = 1 keeps only the globally largest singular value
+                        Ua1, Sa1, Va1, ϵa1 = tsvd(t; trunc=truncrelerr(1.0, 1), p=p)
+                        @test dim(domain(Sa1)) == 1
+                        # relerr equals TruncateDimCutoff with a non-binding D
+                        Ud, Sd, Vd, ϵd = tsvd(t; trunc=truncdimcutoff(D=dim(domain(S₀)) + 10, ϵ=5e-1), p=p)
+                        Ue, Se, Ve, ϵe = tsvd(t; trunc=truncrelerr(5e-1), p=p)
+                        @test (Ud, Sd, Vd, ϵd) == (Ue, Se, Ve, ϵe)
+                        # ϵ = 0 keeps everything, so a binding D falls back to truncdim
+                        Dh = max(dim(domain(S₀)) ÷ 2, 1)
+                        Uc, Sc, Vc, ϵc = tsvd(t; trunc=truncdimcutoff(D=Dh, ϵ=0.0), p=p)
+                        Uc′, Sc′, Vc′, ϵc′ = tsvd(t; trunc=truncdim(Dh), p=p)
+                        @test (Uc, Sc, Vc, ϵc) == (Uc′, Sc′, Vc′, ϵc′)
+                        # keyword constructor and exported struct name
+                        @test TK.TruncateRelError(ϵ=2e-1, add_back=3) == truncrelerr(2e-1, 3)
+                        @test TK.TruncateDimCutoff(D=5, ϵ=2e-1) == truncdimcutoff(D=5, ϵ=2e-1)
+                        # add_back larger than D is rejected
+                        @test_throws ArgumentError TK.TruncateDimCutoff(D=2, ϵ=1e-1, add_back=3)
+                        @test_throws ArgumentError truncdimcutoff(2, 1e-1; add_back=3)
+                        @test_throws ArgumentError truncdimcutoff(D=2, ϵ=1e-1, add_back=3)
                     end
                 end
             end
