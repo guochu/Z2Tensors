@@ -24,9 +24,7 @@ Bsymbol(a::Z2Irrep, b::Z2Irrep, c::Z2Irrep) = Int(Nsymbol(a, b, c))
 Rsymbol(a::Z2Irrep, b::Z2Irrep, c::Z2Irrep) = Int(Nsymbol(a, b, c))
 
 function fusiontensor(a::Z2Irrep, b::Z2Irrep, c::Z2Irrep)
-    # last dimension is the multiplicity Nsymbol(a,b,c), hence 0 for a
-    # forbidden channel, as in TensorKit
-    return fill(Int(Nsymbol(a, b, c)), (1, 1, 1, Nsymbol(a, b, c)))
+    return fill(Int(Nsymbol(a, b, c)), (1, 1, 1, 1))
 end
 
 
