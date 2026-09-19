@@ -59,6 +59,9 @@ include("diagonal.jl")
 # plain-array factorization utilities (ported from TEMPO)
 include("tensorfactorizations.jl")
 
+# plain-array tensor operations (permute, tie, isometry, kron)
+include("tensoroperations.jl")
+
 # consistency with TensorKit.jl
 include("compare_tensorkit.jl")
 

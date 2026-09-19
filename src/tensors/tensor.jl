@@ -314,11 +314,11 @@ end
 end
 
 @inline function Base.getindex(t::TensorMap, sectors::Tuple{I,Vararg{I}}) where {I<:Sector}
-    I === sectortype(t) || throw(SectorMismatch("Not a valid sectortype for this tensor."))
+    I === sectortype(t) || throw(SectorMismatch("Not a valid sectortype for this tensor"))
     # FusionStyle(I) isa UniqueFusion ||
     #     throw(SectorMismatch("Indexing with sectors only possible if unique fusion"))
     length(sectors) == numind(t) ||
-        throw(ArgumentError("Number of sectors does not match."))
+        throw(ArgumentError("Number of sectors does not match"))
     s₁ = TupleTools.getindices(sectors, codomainind(t))
     s₂ = map(dual, TupleTools.getindices(sectors, domainind(t)))
     c1 = couple(s₁)

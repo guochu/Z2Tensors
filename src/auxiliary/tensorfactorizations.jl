@@ -4,6 +4,8 @@
 # package's truncation schemes and MatrixAlgebraKit backends.
 # Also defines the truncation scheme types themselves; the sector-level
 # truncation machinery (`_compute_truncdim`) lives in tensors/truncation.jl.
+# Plain-array tensor operations (permute, tie, isometry, kron) live in
+# auxiliary/tensoroperations.jl.
 
 # Truncation schemes
 #--------------------
@@ -79,60 +81,6 @@ function compute_size(v::AbstractDict)
         init += dim(c) * b
     end
     return init
-end
-
-# Array helpers
-#---------------
-"""
-    permute(m::AbstractArray, perm)
-
-Return a view of `m` with its dimensions permuted according to `perm` (a `PermutedDimsArray`), without copying data.
-"""
-permute(m::AbstractArray, perm) = PermutedDimsArray(m, perm)
-"""
-    permute(m::AbstractArray, left, right)
-
-Group the dimensions into `left` and `right` and place them in that order, equivalent to `permute(m, (left..., right...))`.
-"""
-permute(m::AbstractArray, left, right) = permute(m, (left..., right...))
-
-function isometry(::Type{T}, m::Int, n::Int) where {T<:Number}
-    r = zeros(T, m, n)
-    for i in 1:min(m, n)
-        r[i, i] = 1
-    end
-    return r
-end
-"""
-    isometry(T, m, n)
-    isometry(T, d)
-    isometry(m, n)
-    isometry(d)
-
-Return the rectangular identity (isometry) matrix of size `m × n` (`d × d`) with element type `T` (default `Float64`).
-"""
-isometry(::Type{T}, d::Int) where {T<:Number} = isometry(T, d, d)
-isometry(m::Int, n::Int) = isometry(Float64, m, n)
-isometry(d::Int) = isometry(Float64, d)
-
-function _group_extent(extent::NTuple{N,Int}, idx::NTuple{N1,Int}) where {N,N1}
-    ext = Vector{Int}(undef, N1)
-    l = 0
-    for i in 1:N1
-        ext[i] = prod(extent[(l + 1):(l + idx[i])])
-        l += idx[i]
-    end
-    return NTuple{N1,Int}(ext)
-end
-
-"""
-    tie(a::AbstractArray, axs)
-
-Reshape the tensor `a` by grouping consecutive axes according to `axs`, where `sum(axs)` must equal `ndims(a)`.
-"""
-function tie(a::AbstractArray{T,N}, axs::NTuple{N1,Int}) where {T,N,N1}
-    (sum(axs) != N) && error("total number of axes should equal to tensor rank.")
-    return reshape(a, _group_extent(size(a), axs))
 end
 
 # Matrix-level truncation of a singular value vector (descending order)

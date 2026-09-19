@@ -44,3 +44,23 @@ function permute(f1::FusionTree, f2::FusionTree,
     coeff = (coupled1′ == coupled2′) ? 1 : 0
     return fusiontreedict()((f1′, f2′) => coeff)
 end
+
+"""
+    merge(f1::FusionTree{N₁}, f2::FusionTree{N₂}, c::Z2Irrep, μ::Int = 1)
+
+Merge two fusion trees `f1` and `f2` into a single fusion tree with uncoupled legs
+`(f1.uncoupled..., f2.uncoupled...)` and total charge `c`; returns a dictionary
+`tree => coefficient`. For `Z2Irrep` the fusion is unique, so the result contains
+a single tree with coefficient 1 (provided `couple((f1.coupled, f2.coupled)) == c`,
+otherwise it is empty).
+"""
+function Base.merge(f1::FusionTree{N₁}, f2::FusionTree{N₂}, c::Z2Irrep,
+                    μ::Int = 1) where {N₁, N₂}
+    μ == 1 || return Dict{FusionTree{N₁ + N₂}, Int}()
+    out = Dict{FusionTree{N₁ + N₂}, Int}()
+    if c == couple((f1.coupled, f2.coupled))
+        tree = FusionTree{N₁ + N₂}((f1.uncoupled..., f2.uncoupled...), c)
+        out[tree] = 1
+    end
+    return out
+end

@@ -332,19 +332,19 @@ function ⊗(t1::AbstractTensorMap, t2::AbstractTensorMap)
         for (f2l, f2r) in fusiontrees(t2)
             c1 = f1l.coupled # = f1r.coupled
             c2 = f2l.coupled # = f2r.coupled
-            for c in c1 ⊗ c2
-                for μ in 1:Nsymbol(c1, c2, c)
-                    for (fl, coeff1) in merge(f1l, f2l, c, μ)
-                        for (fr, coeff2) in merge(f1r, f2r, c, μ)
-                            d1 = dim(cod1, f1l.uncoupled)
-                            d2 = dim(cod2, f2l.uncoupled)
-                            d3 = dim(dom1, f1r.uncoupled)
-                            d4 = dim(dom2, f2r.uncoupled)
-                            m1 = sreshape(t1[f1l, f1r], (d1, 1, d3, 1))
-                            m2 = sreshape(t2[f2l, f2r], (1, d2, 1, d4))
-                            m = sreshape(t[fl, fr], (d1, d2, d3, d4))
-                            m .+= coeff1 .* conj(coeff2) .* m1 .* m2
-                        end
+            # Z2 fusion is unique: `c1 ⊗ c2` yields the single resulting sector
+            c = c1 ⊗ c2
+            for μ in 1:Nsymbol(c1, c2, c)
+                for (fl, coeff1) in merge(f1l, f2l, c, μ)
+                    for (fr, coeff2) in merge(f1r, f2r, c, μ)
+                        d1 = dim(cod1, f1l.uncoupled)
+                        d2 = dim(cod2, f2l.uncoupled)
+                        d3 = dim(dom1, f1r.uncoupled)
+                        d4 = dim(dom2, f2r.uncoupled)
+                        m1 = sreshape(t1[f1l, f1r], (d1, 1, d3, 1))
+                        m2 = sreshape(t2[f2l, f2r], (1, d2, 1, d4))
+                        m = sreshape(t[fl, fr], (d1, d2, d3, d4))
+                        m .+= coeff1 .* conj(coeff2) .* m1 .* m2
                     end
                 end
             end
@@ -352,4 +352,16 @@ function ⊗(t1::AbstractTensorMap, t2::AbstractTensorMap)
     end
     return t
 end
+
+# Kronecker product of symmetry-preserving tensors, following TensorKit's
+# tensor product: the block at sector `c1 ⊗ c2` is the Kronecker product of
+# the corresponding blocks of t1 and t2.
+"""
+    Base.kron(t1::AbstractTensorMap, t2::AbstractTensorMap)
+
+Kronecker (tensor) product of two symmetry-preserving tensors, equivalent to `t1 ⊗ t2`:
+the result lives on `(codomain(t1) ⊗ codomain(t2)) ← (domain(t1) ⊗ domain(t2))` and its
+block at sector `c1 ⊗ c2` is the Kronecker product of the corresponding blocks.
+"""
+Base.kron(t1::AbstractTensorMap, t2::AbstractTensorMap) = t1 ⊗ t2
 

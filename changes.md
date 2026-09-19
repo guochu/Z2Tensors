@@ -58,8 +58,12 @@
   - `leftorth!` / `leftorth` / `rightorth!` / `rightorth`（矩阵级关键字版与稠密张量分组版，委托给已有的矩阵级位置参数实现）
   - 截断方案对普通奇异值矢量的 `_truncate!`（`NoTruncation`、`truncdim`、`truncerr`、`truncbelow`、`truncrelerr`、`truncdimcutoff`；`truncdimcutoff` 返回相对误差，其余返回绝对尾部范数，与 TEMPO 一致）
   - 辅助工具：数组 `permute` 视图、`tie`、`isometry`、`renyi_entropy`
+- 新增 `src/auxiliary/tensoroperations.jl`：存放与分解无关的纯数组张量操作（`permute` 视图、`tie`、`isometry`、`kron`）。
+- 新增 `kron(t1::AbstractTensorMap, t2::AbstractTensorMap)`（`tensors/linalg.jl`）：Z2 对称张量的 Kronecker 积，等价于 `t1 ⊗ t2`（TensorKit 张量积语义，`c1 ⊗ c2` 扇区块为对应块的 Kronecker 积）；同时以 `Base.kron` 重载的方式支持同秩稠密数组的 Kronecker 积（向量/矩阵语义不变）。
+- 融合树新增 `Base.merge(f1::FusionTree{N₁}, f2::FusionTree{N₂}, c::Z2Irrep, μ=1)`（返回 `tree => coeff` 字典，Z2 融合唯一时系数为 1），修复 `⊗(t1::AbstractTensorMap, t2::AbstractTensorMap)` 中 `for c in c1 ⊗ c2` 对 sector 标量迭代的问题。
+- 输出/报错信息末尾不再带句号。
 - 导出调整：新增导出 `TruncationScheme`、`NoTruncation`、`tie`、`isometry`、`renyi_entropy`；`truncdim` 新增关键字构造 `truncdim(; D)`。`QR`/`QRpos`/`LQ`/`LQpos`/`SVD`/`SDD`/`Polar` 维持原导出不变。
-- 测试新增 `test/tensorfactorizations.jl`（参照 TEMPO `test/api/truncation.jl` 与 `linalg.jl`；`add_back > D` 按本包语义改为抛 `ArgumentError`）。
+- 测试新增 `test/tensorfactorizations.jl`（参照 TEMPO `test/api/truncation.jl` 与 `linalg.jl`；`add_back > D` 按本包语义改为抛 `ArgumentError`）与 `test/tensoroperations.jl`（`isometry`/`permute`/`tie`/`kron` 纯数组与 Z2 张量版本，Z2 版与稠密矩阵 Kronecker 积逐块对照）。
 
 ## 其他
 

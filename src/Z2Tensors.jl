@@ -105,6 +105,7 @@ include("sectors.jl")
 include("auxiliary/misc.jl")
 include("auxiliary/dicts.jl")
 include("auxiliary/linalg.jl")
+include("auxiliary/tensoroperations.jl")
 include("auxiliary/tensorfactorizations.jl")
 
 #--------------------------------------------------------------------

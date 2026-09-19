@@ -109,28 +109,6 @@ end
     @test renyi_entropy(p) > 0
 end
 
-@testset "isometry                   " begin
-    @test isometry(3) == LinearAlgebra.Matrix(LinearAlgebra.I, 3, 3)
-    @test isometry(3) isa Matrix{Float64}
-    @test isometry(ComplexF64, 3) == LinearAlgebra.Matrix(LinearAlgebra.I, 3, 3)
-    @test isometry(ComplexF64, 3) isa Matrix{ComplexF64}
-    i34 = isometry(3, 4)
-    @test i34 == [1 0 0 0; 0 1 0 0; 0 0 1 0]
-    @test i34 * i34' == LinearAlgebra.Matrix(LinearAlgebra.I, 3, 3)
-    i32 = isometry(ComplexF64, 3, 2)
-    @test i32 == [1 0; 0 1; 0 0]
-    @test i32' * i32 == LinearAlgebra.Matrix(LinearAlgebra.I, 2, 2)
-end
-
-@testset "permute (plain array)      " begin
-    a = randn(3, 4)
-    @test permute(a, (2, 1)) ≈ permutedims(a, (2, 1))
-    @test permute(a, (1,), (2,)) ≈ a
-    t = randn(2, 3, 4)
-    @test permute(t, (1, 2), (3,)) ≈ permute(t, (1, 2, 3))
-    @test TK.tie(t, (2, 1)) ≈ reshape(t, 6, 4)
-end
-
 @testset "tsvd and tsvd! (tensor)    " begin
     a = randn(ComplexF64, 6, 5)
     ac = copy(a)
