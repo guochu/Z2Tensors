@@ -1,32 +1,16 @@
 # truncation.jl
 #
-# Implements truncation schemes for truncating a tensor with svd, leftorth or rightorth
-abstract type TruncationScheme end
-
-struct NoTruncation <: TruncationScheme
-end
-notrunc() = NoTruncation()
-
-struct TruncationError{T<:Real} <: TruncationScheme
-    ϵ::T
-end
-truncerr(epsilon::Real) = TruncationError(epsilon)
-
-struct TruncationDimension <: TruncationScheme
-    dim::Int
-end
-truncdim(d::Int) = TruncationDimension(d)
+# Sector-level truncation machinery: given a per-sector singular value
+# dictionary `Σdata` (sector => vector of singular values), compute the
+# truncation dimensions for each truncation scheme.
+# The truncation scheme types themselves are defined in
+# auxiliary/tensorfactorizations.jl, except `TruncationSpace` which requires
+# `ElementarySpace`.
 
 struct TruncationSpace{S<:ElementarySpace} <: TruncationScheme
     space::S
 end
 truncspace(space::ElementarySpace) = TruncationSpace(space)
-
-struct TruncationCutoff{T<:Real} <: TruncationScheme
-    ϵ::T
-    add_back::Int
-end
-truncbelow(epsilon::Real, add_back::Int=0) = TruncationCutoff(epsilon, add_back)
 
 # Compute the total truncation error given truncation dimensions
 function _compute_truncerr(Σdata, truncdim, p=2)
@@ -160,64 +144,6 @@ function _findnextgrowvalue(Σdata, truncdim::SectorDict{Int}, p::Real)
         end
     end
     return cmax
-end
-
-
-
-
-
-
-# relative ϵ
-
-"""
-    struct TruncateDimCutoff
-first normalize the singular value spectrum by its p-norm, then truncate singular
-values below the relative cutoff ϵ; if the remaining bond dimension is larger than D,
-truncate it below D. The largest add_back singular values are kept even if they fall
-below the cutoff.
-Return the p-norm of the truncated singular values.
-"""
-struct TruncateDimCutoff <: TruncationScheme
-    D::Int
-    ϵ::Float64
-    add_back::Int
-    function TruncateDimCutoff(D::Int, ϵ::Real, add_back::Int)
-        add_back <= D ||
-            throw(ArgumentError("add_back (= $add_back) cannot be larger than D (= $D)"))
-        return new(D, ϵ, add_back)
-    end
-end
-TruncateDimCutoff(; D::Int, ϵ::Real, add_back::Int = 0) =
-    TruncateDimCutoff(D, convert(Float64, ϵ), add_back)
-truncdimcutoff(D::Int, epsilon::Real; add_back::Int = 0) =
-    TruncateDimCutoff(D, epsilon, add_back)
-truncdimcutoff(; D::Int, ϵ::Real, add_back::Int = 0) =
-    TruncateDimCutoff(D, convert(Float64, ϵ), add_back)
-
-"""
-    struct TruncateRelError
-truncate singular values below a relative cutoff ϵ, i.e. the singular value vector is
-first normalized (using its p-norm) and singular values below ϵ are discarded; if fewer
-than `add_back` singular values remain, keep `add_back` of them.
-"""
-struct TruncateRelError <: TruncationScheme
-    ϵ::Float64
-    add_back::Int
-end
-TruncateRelError(; ϵ::Real, add_back::Int = 0) =
-    TruncateRelError(convert(Float64, ϵ), add_back)
-truncrelerr(epsilon::Real, add_back::Int = 0) =
-    TruncateRelError(convert(Float64, epsilon), add_back)
-truncrelerr(; ϵ::Real, add_back::Int = 0) =
-    TruncateRelError(convert(Float64, ϵ), add_back)
-
-compute_size(v::AbstractVector) = length(v)
-function compute_size(v::AbstractDict)
-    init = 0
-    for (c, b) in v
-        init += dim(c) * b
-    end
-    return init
 end
 
 function _compute_truncdim(Σdata, trunc::TruncateDimCutoff, p = 2)

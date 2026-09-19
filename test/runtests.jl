@@ -56,6 +56,9 @@ include("spaces.jl")
 include("tensors.jl")
 include("diagonal.jl")
 
+# plain-array factorization utilities (ported from TEMPO)
+include("tensorfactorizations.jl")
+
 # consistency with TensorKit.jl
 include("compare_tensorkit.jl")
 

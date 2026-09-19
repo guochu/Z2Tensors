@@ -53,13 +53,14 @@ export permute, permute!
 export catdomain, catcodomain
 
 export OrthogonalFactorizationAlgorithm, QR, QRpos, LQ, LQpos, SVD, SDD, Polar
+export tie, isometry, renyi_entropy
 
 # tensor operations
 export @tensor, @tensoropt, @ncon, ncon
 export scalar, add!, contract!
 
 # truncation schemes
-export TruncateDimCutoff, TruncateRelError
+export TruncationScheme, NoTruncation, TruncateDimCutoff, TruncateRelError
 export notrunc, truncerr, truncdim, truncspace, truncbelow, truncdimcutoff, truncrelerr
 
 # Imports
@@ -101,9 +102,10 @@ include("sectors.jl")
 
 # Auxiliary files
 #-----------------
-include("auxiliary/auxiliary.jl")
+include("auxiliary/misc.jl")
 include("auxiliary/dicts.jl")
 include("auxiliary/linalg.jl")
+include("auxiliary/tensorfactorizations.jl")
 
 #--------------------------------------------------------------------
 # experiment with different dictionaries

@@ -49,6 +49,18 @@
   - 若剩余奇异值个数少于 `add_back`，则保留 `add_back` 个（即相对版 `TruncateDimCutoff`，去掉了固定 `D` 截断环节）。
 - 两者均已导出。
 
+## 文件重组与纯数组张量分解工具
+
+- `src/auxiliary/auxiliary.jl` 改名为 `src/auxiliary/misc.jl`；主模块文件中所有 `auxiliary` 的 include 统一前置（紧随 `sectors.jl`）。
+- 截断方案类型（`TruncationScheme` 及 `NoTruncation`、`TruncationError`、`TruncationDimension`、`TruncationCutoff`、`TruncateDimCutoff`、`TruncateRelError`）移至 `src/auxiliary/tensorfactorizations.jl`；`TruncationSpace` 与 sector 级截断机器（`_compute_truncdim`/`_compute_truncerr`/`_findnext*`）留在 `src/tensors/truncation.jl`。
+- 新增 `src/auxiliary/tensorfactorizations.jl`：移植 TEMPO（`src/tensorops/tensorfactorizations.jl`，矩阵级 `_truncate!` 取自其 `truncation.jl`）的纯数组/稠密张量分解工具：
+  - `tsvd!` / `tsvd`（矩阵级与 left/right 分组的稠密张量级，`alg=SDD()/SVD()` 对应 MAK `SafeDivideAndConquer`/`QRIteration`）
+  - `leftorth!` / `leftorth` / `rightorth!` / `rightorth`（矩阵级关键字版与稠密张量分组版，委托给已有的矩阵级位置参数实现）
+  - 截断方案对普通奇异值矢量的 `_truncate!`（`NoTruncation`、`truncdim`、`truncerr`、`truncbelow`、`truncrelerr`、`truncdimcutoff`；`truncdimcutoff` 返回相对误差，其余返回绝对尾部范数，与 TEMPO 一致）
+  - 辅助工具：数组 `permute` 视图、`tie`、`isometry`、`renyi_entropy`
+- 导出调整：新增导出 `TruncationScheme`、`NoTruncation`、`tie`、`isometry`、`renyi_entropy`；`truncdim` 新增关键字构造 `truncdim(; D)`。`QR`/`QRpos`/`LQ`/`LQpos`/`SVD`/`SDD`/`Polar` 维持原导出不变。
+- 测试新增 `test/tensorfactorizations.jl`（参照 TEMPO `test/api/truncation.jl` 与 `linalg.jl`；`add_back > D` 按本包语义改为抛 `ArgumentError`）。
+
 ## 其他
 
 - 空空间构造新增 `Z2Space(; dual)` 方法（factorizations 内 `S(dims)` 空 dict splat 需要）。
