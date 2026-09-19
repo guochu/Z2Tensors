@@ -77,10 +77,8 @@ function isomorphism!(t::AbstractTensorMap)
     return t
 end
 
-# function unitary!(t::AbstractTensorMap)
-#     # InnerProductStyle(t) === EuclideanInnerProduct() || throw_invalid_innerproduct(:unitary)
-#     return isomorphism!(t)
-# end
+# alias matching TensorKit, where unitary maps are isomorphisms
+const unitary! = isomorphism!
 
 function isometry!(t::AbstractTensorMap)
     # InnerProductStyle(t) === EuclideanInnerProduct() ||
@@ -191,12 +189,14 @@ end
 LinearAlgebra.dot(t1::AbstractTensorMap, t2::AbstractTensorMap) = inner(t1, t2)
 
 function LinearAlgebra.norm(t::AbstractTensorMap, p::Real=2)
-    return norm(t.data)
-    # InnerProductStyle(t) === EuclideanInnerProduct() || throw_invalid_innerproduct(:norm)
     return _norm(blocks(t), p, float(zero(real(scalartype(t)))))
 end
+function LinearAlgebra.norm(t::TensorMap, p::Real=2)
+    # performance specialization, matches TensorKit (Z2 has unique fusion)
+    return norm(t.data, p)
+end
 function LinearAlgebra.norm(t::AdjointTensorMap, p::Real=2)
-    return norm(t.parent)
+    return norm(t.parent, p)
 end
 function _norm(blockiter, p::Real, init::Real)
     if p == Inf

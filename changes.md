@@ -70,3 +70,12 @@
 - 空空间构造新增 `Z2Space(; dual)` 方法（factorizations 内 `S(dims)` 空 dict splat 需要）。
 - `SectorDict(kv)` 泛型构造函数加入函数屏障（`_SectorDict`），保证类型稳定（tsvd truncation error 的 `@constinferred` 依赖此点）。
 - 已知约定（非 bug）：`@tensor` 中 `conj(A[...])` 收缩结果空间带 dual 标记（如 `W2'←W2'`），与 TensorKit 行为一致。
+
+## TensorKit 全接口对比修复
+
+- `fusiontensor(a, b, c)`：最后一维大小由恒为 1 改为 multiplicity `Nsymbol(a,b,c)`，禁戒通道返回形状 `(1,1,1,0)` 的空数组，与 TensorKit 一致（原来禁戒通道也返回含单个 0 的数组）。
+- `LinearAlgebra.norm(t::AbstractTensorMap, p=2)`：原实现忽略 `p` 参数直接对存储求 2-范数；改为按块计算 p-范数（`TensorMap` 特化为 `norm(t.data, p)`，`AdjointTensorMap` 透传 `p`），与 TensorKit 一致。
+- 新增 `const unitary! = isomorphism!` 并导出 `unitary`/`unitary!`：原 `unitary` 生成代码调用从未定义的 `unitary!`，一调用即 `UndefVarError`。
+- 新增 `debug/`（已加入 `.gitignore`，不纳入版本管理）：`compare_tensorkit.jl` 从 `test/` 移入，并在原有 28 项对比基础上补齐 sector 代数与融合符号、空间（elementary/product/hom）、张量构造与属性、张量表代数、`permute!`、`catdomain`/`catcodomain`、`kron`/`⊗`、`diag`/`diagm`/`DiagonalTensorMap`、`rightorth`/`svdvals` 等接口与 TensorKit 的逐块对比。
+- `test/runtests.jl` 不再 include 对比脚本（脚本可独立运行：`julia --project=test debug/compare_tensorkit.jl`）。
+- `test/tensoroperations.jl` 的 `kron (Z2Tensor)` 测试仿照 TensorKit `test/tensors/contractions.jl` 重写：检查输入不被修改、`kron == ⊗`、空间、范数保持、稠密 reshape 逐元素对照及 `@tensor` 乘积等价。
