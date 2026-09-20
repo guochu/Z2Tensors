@@ -67,7 +67,6 @@ export notrunc, truncerr, truncdim, truncspace, truncbelow, truncdimcutoff, trun
 # Imports
 #---------
 using TupleTools
-using TupleTools: StaticLength
 
 using Strided
 
@@ -78,11 +77,11 @@ using TensorOperations: IndexTuple, Index2Tuple, linearize, AbstractBackend
 const TO = TensorOperations
 
 
-using Base: @boundscheck, @propagate_inbounds, @constprop,
+using Base: @boundscheck, @propagate_inbounds,
             OneTo, tail, front,
             tuple_type_head, tuple_type_tail, tuple_type_cons,
             SizeUnknown, HasLength, HasShape, IsInfinite, EltypeUnknown, HasEltype
-using Base.Iterators: product, filter
+using Base.Iterators: product
 
 using LinearAlgebra: LinearAlgebra
 using LinearAlgebra: norm, dot, normalize, normalize!, tr,
@@ -92,7 +91,7 @@ using LinearAlgebra: norm, dot, normalize, normalize!, tr,
                      eigen, eigen!, svd, svd!,
                      isposdef, isposdef!, ishermitian, rank, cond,
                      Diagonal, Hermitian
-using LinearAlgebra: LAPACK, triu!, BlasFloat, BlasReal, BlasComplex, checksquare
+using LinearAlgebra: LAPACK, BlasFloat
 
 
 using Random: Random, rand!, randn!
