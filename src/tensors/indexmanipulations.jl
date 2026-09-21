@@ -167,3 +167,70 @@ function _add_abelian_block!(tdst, tsrc, p, fusiontreetransform, f₁, f₂, α,
     return nothing
 end
 
+# =========================
+#  Unit index insertion / removal
+# =========================
+
+"""
+    insertleftunit(t::AbstractTensorMap, i = numind(t) + 1;
+                   conj = false, dual = false) -> tdst
+
+Insert a trivial vector space, isomorphic to the underlying field, before
+position `i`, where `1 ≤ i ≤ numind(t) + 1`. The new index appears at position
+`i` in the new tensor, namely in its codomain for `1 ≤ i ≤ numout(t)` and in
+its domain otherwise.
+
+See also [`insertrightunit`](@ref insertrightunit(::AbstractTensorMap, ::Int)),
+[`removeunit`](@ref removeunit(::AbstractTensorMap, ::Int)).
+"""
+function insertleftunit(t::AbstractTensorMap, i::Int = numind(t) + 1;
+                        conj::Bool = false, dual::Bool = false)
+    W = insertleftunit(space(t), i; conj, dual)
+    tdst = similar(t, W)
+    for (c, b) in blocks(t)
+        copy!(block(tdst, c), b)
+    end
+    return tdst
+end
+
+"""
+    insertrightunit(t::AbstractTensorMap, i = numind(t);
+                    conj = false, dual = false) -> tdst
+
+Insert a trivial vector space, isomorphic to the underlying field, after
+position `i`, where `0 ≤ i ≤ numind(t)`. The new index appears at position
+`i + 1` in the new tensor, namely in its codomain for `0 ≤ i ≤ numout(t)` and
+in its domain otherwise.
+
+See also [`insertleftunit`](@ref insertleftunit(::AbstractTensorMap, ::Int)),
+[`removeunit`](@ref removeunit(::AbstractTensorMap, ::Int)).
+"""
+function insertrightunit(t::AbstractTensorMap, i::Int = numind(t);
+                         conj::Bool = false, dual::Bool = false)
+    W = insertrightunit(space(t), i; conj, dual)
+    tdst = similar(t, W)
+    for (c, b) in blocks(t)
+        copy!(block(tdst, c), b)
+    end
+    return tdst
+end
+
+"""
+    removeunit(t::AbstractTensorMap, i) -> tdst
+
+Remove the trivial tensor product factor at position `1 ≤ i ≤ numind(t)`, which
+has to be isomorphic to the underlying field.
+
+This operation undoes the work of
+[`insertleftunit`](@ref insertleftunit(::AbstractTensorMap, ::Int)) and
+[`insertrightunit`](@ref insertrightunit(::AbstractTensorMap, ::Int)).
+"""
+function removeunit(t::AbstractTensorMap, i::Int)
+    W = removeunit(space(t), i)
+    tdst = similar(t, W)
+    for (c, b) in blocks(t)
+        copy!(block(tdst, c), b)
+    end
+    return tdst
+end
+

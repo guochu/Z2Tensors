@@ -7,33 +7,32 @@ module Z2Tensors
 export Sector
 export Z2Irrep
 
-export VectorSpace, Field, ElementarySpace
+export VectorSpace, ElementarySpace
 export Z2Space
 export CompositeSpace, ProductSpace
 export FusionTree
 export IndexSpace, HomSpace, TensorSpace, TensorMapSpace
 export AbstractTensorMap, AbstractTensor, TensorMap, Tensor
 export DiagonalTensorMap
-export TruncationScheme
 export SpaceMismatch, SectorMismatch, IndexError # error types
 
 # general vector space methods
-export space, field, dual, dim, reduceddim, dims, fuse, flip, isdual, oplus,
+export space, dual, dim, reduceddim, dims, fuse, isdual,
        insertleftunit, insertrightunit, removeunit
 
 # partial order for vector spaces
 export infimum, supremum, isisomorphic, ismonomorphic, isepimorphic
 
 # methods for sectors and properties thereof
-export sectortype, sectors, hassector, Nsymbol, Fsymbol, Rsymbol, Bsymbol, otimes#, frobeniusschur, twist
-export fusiontrees, permute, transpose#, braid
+export sectortype, sectors, hassector, Nsymbol#, frobeniusschur, twist
+export fusiontrees#, braid
 
 # some unicode
-export ⊕, ⊗, ℂ, ℝ, ℤ, ←, →, ≾, ≿, ≅, ≺, ≻
+export ⊕, ⊗, ←, →, ≾, ≿, ≅, ≺, ≻
 
 # tensor maps
 export domain, codomain, numind, numout, numin, domainind, codomainind, allind
-export spacetype, sectortype, storagetype, scalartype, tensormaptype
+export spacetype, storagetype, scalartype, tensormaptype
 export blocksectors, blockdim, block, blocks
 
 # random methods for constructor
@@ -54,11 +53,11 @@ export permute, permute!
 export catdomain, catcodomain
 
 export OrthogonalFactorizationAlgorithm, QR, QRpos, LQ, LQpos, SVD, SDD, Polar
-export tie, isometry, renyi_entropy
+export tie, renyi_entropy
 
 # tensor operations
 export @tensor, @tensoropt, @ncon, ncon
-export scalar, add!, contract!
+export scalar, contract!
 
 # truncation schemes
 export TruncationScheme, NoTruncation, TruncateDimCutoff, TruncateRelError
@@ -85,13 +84,12 @@ using Base.Iterators: product
 
 using LinearAlgebra: LinearAlgebra
 using LinearAlgebra: norm, dot, normalize, normalize!, tr,
-                     axpy!, axpby!, lmul!, rmul!, mul!, ldiv!, rdiv!,
-                     adjoint, adjoint!, transpose, transpose!,
-                     lu, pinv, sylvester,
-                     eigen, eigen!, svd, svd!,
-                     isposdef, isposdef!, ishermitian, rank, cond,
-                     Diagonal, Hermitian
-using LinearAlgebra: LAPACK, BlasFloat
+                     axpy!, axpby!, lmul!, rmul!, mul!,
+                     adjoint, adjoint!,
+                     pinv,
+                     isposdef, isposdef!, ishermitian,
+                     Diagonal
+using LinearAlgebra: BlasFloat
 
 
 using Random: Random, rand!, randn!

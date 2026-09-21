@@ -22,6 +22,61 @@ dim(P::ProductSpace) = prod(dims(P))
 dual(P::ProductSpace{0}) = P
 dual(P::ProductSpace) = ProductSpace(map(dual, reverse(P.spaces)))
 
+"""
+    insertleftunit(P::ProductSpace, i::Int = length(P) + 1; conj = false, dual = false)
+
+Insert a trivial vector space, isomorphic to the underlying field, at position `i`.
+More specifically, adds a left monoidal unit or its dual.
+
+See also [`insertrightunit`](@ref insertrightunit(::ProductSpace, ::Int)),
+[`removeunit`](@ref removeunit(::ProductSpace, ::Int)).
+"""
+function insertleftunit(P::ProductSpace{N}, i::Int = N + 1;
+                        conj::Bool = false, dual::Bool = false) where {N}
+    1 ≤ i ≤ N + 1 ||
+        throw(ArgumentError("insertion position $i out of range for product space of length $N"))
+    u = oneunit(Z2Space)
+    dual && (u = Z2Tensors.dual(u))
+    conj && (u = Z2Tensors.conj(u))
+    return ProductSpace(TupleTools.insertafter(P.spaces, i - 1, (u,)))
+end
+
+"""
+    insertrightunit(P::ProductSpace, i::Int = length(P); conj = false, dual = false)
+
+Insert a trivial vector space, isomorphic to the underlying field, after position `i`.
+More specifically, adds a right monoidal unit or its dual.
+
+See also [`insertleftunit`](@ref insertleftunit(::ProductSpace, ::Int)),
+[`removeunit`](@ref removeunit(::ProductSpace, ::Int)).
+"""
+function insertrightunit(P::ProductSpace{N}, i::Int = N;
+                         conj::Bool = false, dual::Bool = false) where {N}
+    0 ≤ i ≤ N ||
+        throw(ArgumentError("insertion position $i out of range for product space of length $N"))
+    u = oneunit(Z2Space)
+    dual && (u = Z2Tensors.dual(u))
+    conj && (u = Z2Tensors.conj(u))
+    return ProductSpace(TupleTools.insertafter(P.spaces, i, (u,)))
+end
+
+"""
+    removeunit(P::ProductSpace, i::Int)
+
+Remove the trivial tensor product factor at position `1 ≤ i ≤ length(P)`, which
+has to be isomorphic to the underlying field.
+
+This operation undoes the work of [`insertleftunit`](@ref insertleftunit(::ProductSpace, ::Int))
+and [`insertrightunit`](@ref insertrightunit(::ProductSpace, ::Int)).
+"""
+function removeunit(P::ProductSpace{N}, i::Int) where {N}
+    1 ≤ i ≤ N ||
+        throw(ArgumentError("removal position $i out of range for product space of length $N"))
+    isunitspace(P[i]) ||
+        throw(ArgumentError("space at position $i is not isomorphic to the underlying field: $(P[i])"))
+    return ProductSpace(TupleTools.deleteat(P.spaces, i))
+end
+
 # more specific methods
 
 sectors(P::ProductSpace) = _sectors(P, sectortype(P))

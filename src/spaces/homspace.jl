@@ -87,6 +87,32 @@ function compose(W::HomSpace, V::HomSpace)
     return HomSpace(codomain(W), domain(V))
 end
 
+function insertleftunit(W::HomSpace, i::Int = numind(W) + 1;
+                        conj::Bool = false, dual::Bool = false)
+    if i <= numout(W)
+        return insertleftunit(codomain(W), i; conj, dual) ← domain(W)
+    else
+        return codomain(W) ← insertleftunit(domain(W), i - numout(W); conj, dual)
+    end
+end
+
+function insertrightunit(W::HomSpace, i::Int = numind(W);
+                         conj::Bool = false, dual::Bool = false)
+    if i <= numout(W)
+        return insertrightunit(codomain(W), i; conj, dual) ← domain(W)
+    else
+        return codomain(W) ← insertrightunit(domain(W), i - numout(W); conj, dual)
+    end
+end
+
+function removeunit(W::HomSpace, i::Int)
+    if i <= numout(W)
+        return removeunit(codomain(W), i) ← domain(W)
+    else
+        return codomain(W) ← removeunit(domain(W), i - numout(W))
+    end
+end
+
 # Block and fusion tree ranges: structure information for building tensors
 #--------------------------------------------------------------------------
 struct FusionBlockStructure{N₁,N₂,N}

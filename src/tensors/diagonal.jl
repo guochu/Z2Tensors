@@ -243,6 +243,14 @@ for f in (:sqrt,)
     @eval Base.$f(d::DiagonalTensorMap) = DiagonalTensorMap($f.(d.data), d.domain)
 end
 
+# diagonal-specific linear algebra
+LinearAlgebra.ishermitian(d::DiagonalTensorMap) = all(isreal, d.data)
+LinearAlgebra.isposdef(d::DiagonalTensorMap) = all(x -> isreal(x) && real(x) > 0, d.data)
+function LinearAlgebra.pinv(d::DiagonalTensorMap)
+    data = map(x -> iszero(x) ? zero(x) : pinv(x), d.data)
+    return DiagonalTensorMap(data, d.domain)
+end
+
 
 function Base.:\(t1::DiagonalTensorMap, t2::AbstractTensorMap)
     codomain(t1) == codomain(t2) ||

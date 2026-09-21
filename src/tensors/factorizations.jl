@@ -23,6 +23,38 @@ function LinearAlgebra.svdvals(t::AbstractTensorMap)
     return LinearAlgebra.svdvals!(tcopy)
 end
 
+function LinearAlgebra.ishermitian(t::AbstractTensorMap)
+    domain(t) == codomain(t) || return false
+    for (c, b) in blocks(t)
+        ishermitian(b) || return false
+    end
+    return true
+end
+LinearAlgebra.ishermitian(t::AdjointTensorMap) = ishermitian(t.parent)
+
+function LinearAlgebra.isposdef!(t::AbstractTensorMap)
+    domain(t) == codomain(t) ||
+        throw(SpaceMismatch("isposdef requires domain and codomain to be the same"))
+    for (c, b) in blocks(t)
+        isposdef(b) || return false
+    end
+    return true
+end
+function LinearAlgebra.isposdef(t::AbstractTensorMap)
+    return isposdef!(copy(t))
+end
+LinearAlgebra.isposdef(t::AdjointTensorMap) = isposdef(t.parent)
+
+function LinearAlgebra.pinv(t::AbstractTensorMap; kwargs...)
+    T = float(scalartype(t))
+    tpinv = similar(t, T, domain(t) ← codomain(t))
+    # TODO: rtol is applied per block instead of to the total tensor norm
+    for (c, b) in blocks(t)
+        copy!(block(tpinv, c), pinv(b; kwargs...))
+    end
+    return tpinv
+end
+
 function leftorth(t::AbstractTensorMap, p::Index2Tuple; kwargs...)
     tcopy = permutedcopy_oftype(t, factorisation_scalartype(leftorth, t), p)
     return leftorth!(tcopy; kwargs...)

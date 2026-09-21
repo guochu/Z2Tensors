@@ -15,13 +15,8 @@ Z2Irrep() = Z2Irrep(0)
 
 # Nsymbol(a::Z2Irrep, b::Z2Irrep, c::Z2Irrep) = c == first(a ⊗ b)
 Nsymbol(a::Z2Irrep, b::Z2Irrep, c::Z2Irrep) = c == a ⊗ b
-function Fsymbol(a::Z2Irrep, b::Z2Irrep, c::Z2Irrep, d::Z2Irrep, e::Z2Irrep, f::Z2Irrep)
-    return Int(Nsymbol(a, b, e) * Nsymbol(e, c, d) * Nsymbol(b, c, f) * Nsymbol(a, f, d))
-end
 frobenius_schur_phase(a::Z2Irrep) = 1
 Asymbol(a::Z2Irrep, b::Z2Irrep, c::Z2Irrep) = Int(Nsymbol(a, b, c))
-Bsymbol(a::Z2Irrep, b::Z2Irrep, c::Z2Irrep) = Int(Nsymbol(a, b, c))
-Rsymbol(a::Z2Irrep, b::Z2Irrep, c::Z2Irrep) = Int(Nsymbol(a, b, c))
 
 function fusiontensor(a::Z2Irrep, b::Z2Irrep, c::Z2Irrep)
     return fill(Int(Nsymbol(a, b, c)), (1, 1, 1, 1))
@@ -38,7 +33,6 @@ dual(c::Z2Irrep) = c # typeof(c)(N - c.n)
 
 ⊗(c::Z2Irrep) = c
 ⊗(c::Z2Irrep, cs::Vararg{Z2Irrep}) = Z2Irrep(sum(c.n for c in cs) + c.n)
-const otimes = ⊗
 
 
 Base.hash(c::Z2Irrep, h::UInt) = hash(c.n, h)

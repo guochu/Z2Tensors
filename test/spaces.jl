@@ -35,4 +35,37 @@ println("------------------------------------")
             @test (V1 ⊗ V2 ← V1 ⊗ V2) == @constinferred TK.compose(W, W')
         end
     end
+    @timedtestset "insert/remove unit spaces" begin
+        V1, V2, V3, V4, V5 = VZ2
+        u = oneunit(Z2Space)
+        ud = u'
+        P = V1 ⊗ V2 ⊗ V3
+        @test insertleftunit(P) == (V1 ⊗ V2 ⊗ V3 ⊗ u)
+        @test insertleftunit(P, 2) == (V1 ⊗ u ⊗ V2 ⊗ V3)
+        @test insertleftunit(P, 4; dual = true) == (V1 ⊗ V2 ⊗ V3 ⊗ ud)
+        @test insertrightunit(P) == (V1 ⊗ V2 ⊗ V3 ⊗ u)
+        @test insertrightunit(P, 0) == (u ⊗ V1 ⊗ V2 ⊗ V3)
+        @test insertrightunit(P, 2; dual = true) == (V1 ⊗ V2 ⊗ ud ⊗ V3)
+        @test removeunit(insertleftunit(P, 2), 2) == P
+        @test removeunit(insertrightunit(P, 1), 2) == P
+        @test_throws ArgumentError removeunit(P, 2)
+        @test_throws ArgumentError insertleftunit(P, 5)
+        @test_throws ArgumentError insertrightunit(P, 5)
+
+        W = V1 ⊗ V2 ← V3 ⊗ V4
+        @test insertleftunit(W) == (V1 ⊗ V2 ← V3 ⊗ V4 ⊗ u)
+        @test insertleftunit(W, 1) == (u ⊗ V1 ⊗ V2 ← V3 ⊗ V4)
+        @test insertleftunit(W, 3) == (V1 ⊗ V2 ← u ⊗ V3 ⊗ V4)
+        @test insertleftunit(W, 4) == (V1 ⊗ V2 ← V3 ⊗ u ⊗ V4)
+        @test insertleftunit(W, 5; dual = true) == (V1 ⊗ V2 ← V3 ⊗ V4 ⊗ ud)
+        @test insertrightunit(W) == (V1 ⊗ V2 ← V3 ⊗ V4 ⊗ u)
+        @test insertrightunit(W, 0) == (u ⊗ V1 ⊗ V2 ← V3 ⊗ V4)
+        @test insertrightunit(W, 2; dual = true) == (V1 ⊗ V2 ⊗ ud ← V3 ⊗ V4)
+        @test insertrightunit(W, 3) == (V1 ⊗ V2 ← V3 ⊗ u ⊗ V4)
+        @test removeunit(insertleftunit(W, 3), 3) == W
+        @test removeunit(insertrightunit(W, 3), 4) == W
+        @test removeunit(insertrightunit(W, 0), 1) == W
+        @test_throws ArgumentError removeunit(W, 1)
+        @test_throws ArgumentError removeunit(W, 4)
+    end
 end

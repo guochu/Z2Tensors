@@ -73,6 +73,11 @@
 
 ## TensorKit 全接口对比修复
 
+- 移除对 Z2 而言 trivial 的 sector 符号函数 `Fsymbol` / `Rsymbol` / `Bsymbol`（定义与导出，Z2 下全部退化为 `Nsymbol`）；`Nsymbol`、`frobenius_schur_phase`、`fusiontensor` 保留。
+- 去除重复导出：`sectortype`、`permute`、`isometry`、`TruncationScheme`、`add!`（各保留一处）。
+- 导出清理：移除无实现/无绑定的导出名 `Field`、`field`、`flip`、`oplus`、`otimes`（含 `const otimes = ⊗`）、`transpose`、`ℂ`/`ℝ`/`ℤ`；同步移除 `using LinearAlgebra` 中未使用的导入（`ldiv!`、`rdiv!`、`transpose!`、`transpose`、`lu`、`sylvester`、`eigen`、`eigen!`、`svd`、`svd!`、`rank`、`cond`、`Hermitian`、`LAPACK`）。
+- 补齐 `insertleftunit` / `insertrightunit` / `removeunit`（此前仅导出未实现）：`ProductSpace`、`HomSpace` 与张量级（`conj`/`dual` 关键字选择 unit 空间；unit 腿在每个块中维度为 1，块数据逐块复制），语义与 TensorKit 一致（`insertleftunit` 默认位置 `numind+1`，`insertrightunit` 默认 `numind`）；新增内部函数 `isunitspace(::Z2Space)`。
+- 补齐 `ishermitian` / `isposdef` / `isposdef!` / `pinv`（此前仅导出 LinearAlgebra 矩阵版，对张量会 MethodError）：张量级逐块实现（`ishermitian`/`isposdef` 要求 `domain == codomain`；`pinv(t)` 返回 `domain(t) ← codomain(t)`，`atol`/`rtol` 透传给各块），并提供 `DiagonalTensorMap` 特化与 `AdjointTensorMap` 透传。
 - `LinearAlgebra.norm(t::AbstractTensorMap, p=2)`：原实现忽略 `p` 参数直接对存储求 2-范数；改为按块计算 p-范数（`TensorMap` 特化为 `norm(t.data, p)`，`AdjointTensorMap` 透传 `p`），与 TensorKit 一致。
 - 新增 `const unitary! = isomorphism!` 并导出 `unitary`/`unitary!`：原 `unitary` 生成代码调用从未定义的 `unitary!`，一调用即 `UndefVarError`。
 - 新增 `debug/`（已加入 `.gitignore`，不纳入版本管理）：`compare_tensorkit.jl` 从 `test/` 移入，并在原有 28 项对比基础上补齐 sector 代数与融合符号、空间（elementary/product/hom）、张量构造与属性、张量表代数、`permute!`、`catdomain`/`catcodomain`、`kron`/`⊗`、`diag`/`diagm`/`DiagonalTensorMap`、`rightorth`/`svdvals` 等接口与 TensorKit 的逐块对比。

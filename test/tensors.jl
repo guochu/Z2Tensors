@@ -517,3 +517,66 @@ end
         end
     end
 end
+
+@timedtestset "insert/remove unit tensors" begin
+    V1, V2, V3, V4, V5 = VZ2
+    _insertdim(dims::Tuple, i) = (dims[1:i-1]..., 1, dims[i:end]...)
+    for T in (Float64, ComplexF64)
+        t = randn(T, V1 ⊗ V2, V3)
+        At = convert(Array, t)
+        coddims = dims(codomain(t))
+        domdims = dims(domain(t))
+        for i in 1:(numind(t) + 1)
+            t1 = insertleftunit(t, i)
+            @test space(t1) == insertleftunit(space(t), i)
+            @test removeunit(t1, i) ≈ t
+            d1 = i <= numout(t) ? _insertdim(coddims, i) : coddims
+            d2 = i <= numout(t) ? domdims : _insertdim(domdims, i - numout(t))
+            @test convert(Array, t1) == reshape(At, (d1..., d2...))
+            t1d = insertleftunit(t, i; dual = true)
+            @test space(t1d) == insertleftunit(space(t), i; dual = true)
+            @test convert(Array, t1d) == convert(Array, t1)
+        end
+        for i in 0:numind(t)
+            t1 = insertrightunit(t, i)
+            @test space(t1) == insertrightunit(space(t), i)
+            @test removeunit(t1, i + 1) ≈ t
+            d1 = i < numout(t) ? _insertdim(coddims, i + 1) : coddims
+            d2 = i < numout(t) ? domdims : _insertdim(domdims, i + 1 - numout(t))
+            @test convert(Array, t1) == reshape(At, (d1..., d2...))
+        end
+        @test insertleftunit(t) ≈ insertleftunit(t, numind(t) + 1)
+        @test insertrightunit(t) ≈ insertrightunit(t, numind(t))
+        @test_throws ArgumentError removeunit(t, 1)
+        # works on adjoint tensors too; adjoint mirrors the index order, so the
+        # unit inserted at position 2 of a 4-index tensor sits at position 3
+        ta = insertleftunit(t, 2)'
+        @test removeunit(ta, 3) ≈ t'
+    end
+end
+
+@timedtestset "ishermitian / isposdef / pinv" begin
+    V1, V2, V3, V4, V5 = VZ2
+    W = VZ2[4]
+    for T in (Float64, ComplexF64)
+        A = randn(T, W ← W)
+        H = A + A'
+        @test ishermitian(H)
+        @test ishermitian(H')
+        @test !ishermitian(A)
+        @test !ishermitian(randn(T, W ← V1))
+        P = A * A'
+        @test isposdef(P)
+        @test !isposdef(-P)
+        @test !isposdef(A - A')
+        Pi = pinv(P)
+        @test P * Pi ≈ one(P)
+        @test Pi * P ≈ one(P)
+        B = randn(T, V1 ⊗ V2, V3)
+        Bp = pinv(B)
+        @test space(Bp) == (domain(B) ← codomain(B))
+        @test B * Bp * B ≈ B
+        @test Bp * B * Bp ≈ Bp
+        @test pinv(B; rtol = 1e-12) ≈ Bp
+    end
+end

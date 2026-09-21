@@ -55,6 +55,9 @@ Base.zero(S::Type{Z2Space}) = S(one(Z2Irrep) => 0)
 Base.oneunit(V::Z2Space) = oneunit(typeof(V))
 Base.zero(V::Z2Space) = zero(typeof(V))
 
+# space consisting of a single trivial charge, isomorphic to the underlying field
+isunitspace(V::Z2Space) = (V.dims[1] == 1) && (V.dims[2] == 0)
+
 function ⊕(V₁::Z2Space, V₂::Z2Space)
     dual1 = isdual(V₁)
     dual1 == isdual(V₂) ||
