@@ -109,8 +109,6 @@ end
 
 # Derived indexing behavior for tensors with trivial symmetry
 #-------------------------------------------------------------
-# using TensorKit.Strided: SliceIndex
-using Strided: SliceIndex
 
 # Similar
 #---------
