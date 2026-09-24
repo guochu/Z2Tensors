@@ -580,3 +580,74 @@ end
         @test pinv(B; rtol = 1e-12) ≈ Bp
     end
 end
+
+@testset "truncation schemes (matrix)" begin
+    @test truncdim(3) isa TK.TruncationDimension
+    @test truncdim(D = 4) isa TK.TruncationDimension
+    @test truncdim(D = 4).dim == 4
+    @test truncrelerr(ϵ = 1.0e-3) isa TK.TruncateRelError
+    @test truncrelerr(ϵ = 1.0e-3).ϵ == 1.0e-3
+    @test truncrelerr(1.0e-8) isa TK.TruncateRelError
+    @test truncrelerr(1.0e-8).ϵ == 1.0e-8
+    @test truncdimcutoff(D = 5, ϵ = 1.0e-3) isa TK.TruncateDimCutoff
+    @test truncdimcutoff(5, 1.0e-3) isa TK.TruncateDimCutoff
+    @test TK.NoTruncation() isa TK.TruncationScheme
+    # add_back larger than D is rejected
+    @test_throws ArgumentError truncdimcutoff(D = 2, ϵ = 1.0e-16, add_back = 5)
+end
+
+@testset "kron (Z2Tensor)            " begin
+    # convention copied from TensorKit's "Tensor product" tests:
+    #   t1 : V1 ← V5',  t2 : V2 ⊗ V3 ← V4'
+    V1 = Z2Space(0 => 2, 1 => 3)
+    V2 = Z2Space(0 => 1, 1 => 2)
+    V3 = Z2Space(0 => 1, 1 => 1)
+    V4 = Z2Space(0 => 3, 1 => 2)
+    V5 = Z2Space(0 => 2, 1 => 5)
+    for T in (Float32, ComplexF64)
+        t1 = randn(T, V1, V5')
+        t2 = randn(T, V2 ⊗ V3, V4')
+        tc1 = copy(t1)
+        t = kron(t1, t2)
+        @test t1 == tc1 # kron does not modify its input
+        @test t == t1 ⊗ t2
+        @test space(t) == ((V1 ⊗ V2 ⊗ V3) ← (V5' ⊗ V4'))
+
+        # norm preservation
+        @test norm(t) ≈ norm(t1) * norm(t2)
+
+        # dense conversion (Deligne / tensor-product array layout)
+        d1 = dim(codomain(t1))
+        d2 = dim(codomain(t2))
+        d3 = dim(domain(t1))
+        d4 = dim(domain(t2))
+        At = convert(Array, t)
+        @test reshape(At, (d1, d2, d3, d4)) ≈
+              reshape(convert(Array, t1), (d1, 1, d3, 1)) .*
+              reshape(convert(Array, t2), (1, d2, 1, d4))
+
+        # equivalent to the plain @tensor contraction
+        t′ = @tensor tt[1 2 3; 4 5] := t1[1; 4] * t2[2 3; 5]
+        @test t ≈ t′
+    end
+
+    # multi-leg operands: (W1 ⊗ W2 ← W3 ⊗ W4) kron (W5 ← W1')
+    W1 = Z2Space(0 => 1, 1 => 1)
+    W2 = Z2Space(0 => 1, 1 => 2)
+    W3 = Z2Space(0 => 3, 1 => 2)
+    W4 = Z2Space(0 => 2, 1 => 3)
+    W5 = Z2Space(0 => 2, 1 => 5)
+    t1 = randn(ComplexF64, W1 ⊗ W2, W3 ⊗ W4)
+    t2 = randn(ComplexF64, W5, W1')
+    tk = kron(t1, t2)
+    @test space(tk) == ((W1 ⊗ W2 ⊗ W5) ← (W3 ⊗ W4 ⊗ W1'))
+    a1 = convert(Array, t1)
+    a2 = convert(Array, t2)
+    ak = convert(Array, tk)
+    sz1 = size(a1)
+    sz2 = size(a2)
+    b1 = reshape(a1, (sz1[1], sz1[2], 1, sz1[3], sz1[4], 1))
+    b2 = reshape(a2, (1, 1, sz2[1], 1, 1, sz2[2]))
+    expected = b1 .* b2
+    @test reshape(ak, size(expected)) ≈ expected
+end
