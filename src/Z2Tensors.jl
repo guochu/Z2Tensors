@@ -76,9 +76,8 @@ const TO = TensorOperations
 
 
 using Base: @boundscheck, @propagate_inbounds,
-            OneTo, tail, front,
-            tuple_type_head, tuple_type_tail, tuple_type_cons,
-            SizeUnknown, HasLength, HasShape, IsInfinite, EltypeUnknown, HasEltype
+            OneTo, tail,
+            SizeUnknown, HasLength, HasEltype
 using Base.Iterators: product
 
 using LinearAlgebra: LinearAlgebra
