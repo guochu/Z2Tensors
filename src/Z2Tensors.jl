@@ -53,7 +53,6 @@ export permute, permute!
 export catdomain, catcodomain
 
 export OrthogonalFactorizationAlgorithm, QR, QRpos, LQ, LQpos, SVD, SDD, Polar
-export tie, renyi_entropy
 
 # tensor operations
 export @tensor, @tensoropt, @ncon, ncon
@@ -103,8 +102,6 @@ include("sectors.jl")
 include("auxiliary/misc.jl")
 include("auxiliary/dicts.jl")
 include("auxiliary/linalg.jl")
-include("auxiliary/tensoroperations.jl")
-include("auxiliary/tensorfactorizations.jl")
 
 #--------------------------------------------------------------------
 # experiment with different dictionaries

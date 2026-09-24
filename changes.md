@@ -71,6 +71,12 @@
 - `SectorDict(kv)` 泛型构造函数加入函数屏障（`_SectorDict`），保证类型稳定（tsvd truncation error 的 `@constinferred` 依赖此点）。
 - 已知约定（非 bug）：`@tensor` 中 `conj(A[...])` 收缩结果空间带 dual 标记（如 `W2'←W2'`），与 TensorKit 行为一致。
 
+## 移除纯数组工具文件
+
+- 删除 `src/auxiliary/tensoroperations.jl`（数组版 `permute` 视图、`tie`、矩形 `isometry`、同秩数组 `Base.kron`）与 `src/auxiliary/tensorfactorizations.jl`（TEMPO 移植的纯数组 `tsvd` / `tsvd!` / `leftorth` / `rightorth` / `renyi_entropy`），`tie`、`renyi_entropy` 不再导出；`renyi_entropy`、`tie`、数组 `kron` 等功能随之移除。
+- `TruncationScheme` 相关内容（抽象类型、全部具体方案类型与构造器、`compute_size`、纯矢量 `_truncate!` 系列）从 `auxiliary/tensorfactorizations.jl` 合并到 `src/tensors/truncation.jl`（sector 级截断机器之前），张量级分解（`tensors/factorizations.jl`）不受影响。
+- 测试同步删减：`test/tensoroperations.jl` 仅保留 `kron (Z2Tensor)`，`test/tensorfactorizations.jl` 仅保留 `truncation schemes (matrix)`。
+
 ## TensorKit 全接口对比修复
 
 - 移除对 Z2 而言 trivial 的 sector 符号函数 `Fsymbol` / `Rsymbol` / `Bsymbol`（定义与导出，Z2 下全部退化为 `Nsymbol`）；`Nsymbol`、`frobenius_schur_phase`、`fusiontensor` 保留。

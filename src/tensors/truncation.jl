@@ -1,11 +1,133 @@
 # truncation.jl
 #
-# Sector-level truncation machinery: given a per-sector singular value
-# dictionary `Σdata` (sector => vector of singular values), compute the
-# truncation dimensions for each truncation scheme.
-# The truncation scheme types themselves are defined in
-# auxiliary/tensorfactorizations.jl, except `TruncationSpace` which requires
-# `ElementarySpace`.
+# Truncation schemes: the abstract type `TruncationScheme`, its concrete
+# scheme types and constructors, and the plain-vector truncation `_truncate!`
+# helpers, followed by the sector-level truncation machinery that, given a
+# per-sector singular value dictionary `Σdata` (sector => vector of singular
+# values), computes the truncation dimensions for each scheme.
+
+# Truncation schemes
+#--------------------
+abstract type TruncationScheme end
+
+struct NoTruncation <: TruncationScheme
+end
+notrunc() = NoTruncation()
+
+struct TruncationError{T<:Real} <: TruncationScheme
+    ϵ::T
+end
+truncerr(epsilon::Real) = TruncationError(epsilon)
+
+struct TruncationDimension <: TruncationScheme
+    dim::Int
+end
+truncdim(d::Int) = TruncationDimension(d)
+truncdim(; D::Int) = truncdim(D)
+
+struct TruncationCutoff{T<:Real} <: TruncationScheme
+    ϵ::T
+    add_back::Int
+end
+truncbelow(epsilon::Real, add_back::Int = 0) = TruncationCutoff(epsilon, add_back)
+
+"""
+    struct TruncateDimCutoff
+first normalize the singular value spectrum by its p-norm, then truncate singular
+values below the relative cutoff ϵ; if the remaining bond dimension is larger than D,
+truncate it below D. The largest add_back singular values are kept even if they fall
+below the cutoff.
+Return the p-norm of the truncated singular values.
+"""
+struct TruncateDimCutoff <: TruncationScheme
+    D::Int
+    ϵ::Float64
+    add_back::Int
+    function TruncateDimCutoff(D::Int, ϵ::Real, add_back::Int)
+        add_back <= D ||
+            throw(ArgumentError("add_back (= $add_back) cannot be larger than D (= $D)"))
+        return new(D, ϵ, add_back)
+    end
+end
+TruncateDimCutoff(; D::Int, ϵ::Real, add_back::Int = 0) =
+    TruncateDimCutoff(D, convert(Float64, ϵ), add_back)
+truncdimcutoff(D::Int, epsilon::Real; add_back::Int = 0) =
+    TruncateDimCutoff(D, epsilon, add_back)
+truncdimcutoff(; D::Int, ϵ::Real, add_back::Int = 0) =
+    TruncateDimCutoff(D, convert(Float64, ϵ), add_back)
+
+"""
+    struct TruncateRelError
+truncate singular values below a relative cutoff ϵ, i.e. the singular value vector is
+first normalized (using its p-norm) and singular values below ϵ are discarded; if fewer
+than `add_back` singular values remain, keep `add_back` of them.
+"""
+struct TruncateRelError <: TruncationScheme
+    ϵ::Float64
+    add_back::Int
+end
+TruncateRelError(; ϵ::Real, add_back::Int = 0) =
+    TruncateRelError(convert(Float64, ϵ), add_back)
+truncrelerr(epsilon::Real, add_back::Int = 0) =
+    TruncateRelError(convert(Float64, epsilon), add_back)
+truncrelerr(; ϵ::Real, add_back::Int = 0) =
+    TruncateRelError(convert(Float64, ϵ), add_back)
+
+compute_size(v::AbstractVector) = length(v)
+function compute_size(v::AbstractDict)
+    init = 0
+    for (c, b) in v
+        init += dim(c) * b
+    end
+    return init
+end
+
+# Matrix-level truncation of a singular value vector (descending order)
+#-----------------------------------------------------------------------
+_truncate!(v::AbstractVector{<:Real}, ::NoTruncation, p::Real = 2) = v, 0.0
+
+function _truncate!(v::AbstractVector{<:Real}, trunc::TruncationDimension, p::Real = 2)
+    dtrunc = min(length(v), trunc.dim)
+    truncerr = norm(view(v, (dtrunc + 1):length(v)), p)
+    resize!(v, dtrunc)
+    return v, truncerr
+end
+
+function _truncate!(v::AbstractVector{<:Real}, trunc::TruncationError, p::Real = 2)
+    dtrunc = length(v)
+    while dtrunc > 0 && norm(view(v, dtrunc:length(v)), p) <= trunc.ϵ
+        dtrunc -= 1
+    end
+    return _truncate!(v, TruncationDimension(dtrunc), p)
+end
+
+function _truncate!(v::AbstractVector{<:Real}, trunc::TruncationCutoff, p::Real = 2)
+    dtrunc = findlast(Base.Fix2(>, trunc.ϵ), v)
+    dtrunc = isnothing(dtrunc) ? 0 : dtrunc
+    dtrunc = max(dtrunc, trunc.add_back) # keep at least add_back singular values
+    return _truncate!(v, TruncationDimension(dtrunc), p)
+end
+
+function _truncate!(v::AbstractVector{<:Real}, trunc::TruncateRelError, p::Real = 2)
+    sca = norm(v, p)
+    dtrunc = findlast(Base.Fix2(>, sca * trunc.ϵ), v)
+    dtrunc = isnothing(dtrunc) ? 0 : dtrunc
+    dtrunc = max(dtrunc, trunc.add_back) # keep at least add_back singular values
+    return _truncate!(v, TruncationDimension(dtrunc), p)
+end
+
+function _truncate!(v::AbstractVector{<:Real}, trunc::TruncateDimCutoff, p::Real = 2)
+    sca = norm(v, p)
+    dtrunc = findlast(Base.Fix2(>, sca * trunc.ϵ), v)
+    dtrunc = isnothing(dtrunc) ? 0 : dtrunc
+    dtrunc = max(dtrunc, trunc.add_back)   # keep at least add_back singular values
+    dtrunc = min(dtrunc, trunc.D)          # but never more than D
+    v, err = _truncate!(v, TruncationDimension(dtrunc), p)
+    return v, sca == zero(sca) ? err : err / sca
+end
+
+# Sector-level truncation machinery
+#-----------------------------------
 
 struct TruncationSpace{S<:ElementarySpace} <: TruncationScheme
     space::S
