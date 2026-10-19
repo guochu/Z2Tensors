@@ -11,10 +11,11 @@ function TO.tensoralloc(::Type{TT},
                         allocator=TO.DefaultAllocator()) where
          {T,N₁,N₂,TT<:AbstractTensorMap{T,N₁,N₂}}
     A = storagetype(TT)
-    dim = fusionblockstructure(structure).totaldim
-    data = TO.tensoralloc(A, dim, istemp, allocator)
-    # return TT(data, structure)
-    return TensorMap{T}(data, structure)
+    fbs = fusionblockstructure(structure)
+    data = TO.tensoralloc(A, fbs.totaldim, istemp, allocator)
+    # pass the precomputed structure: the generic TensorMap{T}(data, space)
+    # constructor would recompute it from scratch
+    return TensorMap{T,N₁,N₂,A,typeof(fbs)}(data, structure, fbs)
 end
 
 function TO.tensorfree!(t::TensorMap, allocator=TO.DefaultAllocator())
